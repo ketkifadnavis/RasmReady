@@ -1,0 +1,6 @@
+{
+  "name": "Shubh Vivaah - Indian Wedding Planner",
+  "description": "All-in-one Indian wedding planning suite with Ladkiwale & Ladkewale split tracking, multi-event ceremony coordination, budget, tasks, vendors, guests, moodboards, and photo vault.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

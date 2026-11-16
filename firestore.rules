@@ -1,0 +1,102 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Connection test doc
+    match /test/connection {
+      allow read, write: if true;
+    }
+
+    // Weddings collection
+    match /weddings/{weddingId} {
+      allow read: if isValidId(weddingId);
+      allow create, update: if isValidId(weddingId) &&
+        incoming().brideName is string && incoming().brideName.size() <= 100 &&
+        incoming().groomName is string && incoming().groomName.size() <= 100 &&
+        incoming().weddingDate is string;
+      allow delete: if isValidId(weddingId) && isSignedIn();
+    }
+
+    // Budget collection
+    match /budget/{budgetId} {
+      allow read: if isValidId(budgetId);
+      allow create, update: if isValidId(budgetId) &&
+        incoming().weddingId is string && incoming().weddingId.size() <= 128 &&
+        incoming().title is string && incoming().title.size() <= 150 &&
+        incoming().category is string &&
+        incoming().side in ['ladkiwale', 'ladkewale', 'shared'];
+      allow delete: if isValidId(budgetId);
+    }
+
+    // Tasks collection
+    match /tasks/{taskId} {
+      allow read: if isValidId(taskId);
+      allow create, update: if isValidId(taskId) &&
+        incoming().weddingId is string && incoming().weddingId.size() <= 128 &&
+        incoming().title is string && incoming().title.size() <= 200 &&
+        incoming().assignedSide in ['ladkiwale', 'ladkewale', 'shared'];
+      allow delete: if isValidId(taskId);
+    }
+
+    // Vendors collection
+    match /vendors/{vendorId} {
+      allow read: if isValidId(vendorId);
+      allow create, update: if isValidId(vendorId) &&
+        incoming().weddingId is string && incoming().weddingId.size() <= 128 &&
+        incoming().name is string && incoming().name.size() <= 150 &&
+        incoming().side in ['ladkiwale', 'ladkewale', 'shared'];
+      allow delete: if isValidId(vendorId);
+    }
+
+    // Guests collection
+    match /guests/{guestId} {
+      allow read: if isValidId(guestId);
+      allow create, update: if isValidId(guestId) &&
+        incoming().weddingId is string && incoming().weddingId.size() <= 128 &&
+        incoming().name is string && incoming().name.size() <= 150 &&
+        incoming().side in ['ladkiwale', 'ladkewale', 'mutual'];
+      allow delete: if isValidId(guestId);
+    }
+
+    // Moodboards collection
+    match /moodboards/{moodboardId} {
+      allow read: if isValidId(moodboardId);
+      allow create, update: if isValidId(moodboardId) &&
+        incoming().weddingId is string && incoming().weddingId.size() <= 128 &&
+        incoming().event in ['roka', 'mehendi', 'haldi', 'sangeet', 'shaadi', 'reception'] &&
+        incoming().title is string && incoming().title.size() <= 150;
+      allow delete: if isValidId(moodboardId);
+    }
+
+    // Photo albums collection
+    match /albums/{photoId} {
+      allow read: if isValidId(photoId);
+      allow create, update: if isValidId(photoId) &&
+        incoming().weddingId is string && incoming().weddingId.size() <= 128 &&
+        incoming().imageUrl is string && incoming().imageUrl.size() <= 1000;
+      allow delete: if isValidId(photoId);
+    }
+  }
+}

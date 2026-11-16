@@ -1,0 +1,6 @@
+{
+  "summary": "Architectural plan and Firestore data schema for the Indian Wedding Planning App (Shubh Vivaah Planner). \nDefines data collections for budget, tasks, vendors, guests, moodboards, and photo albums with explicit 'Ladkiwale' vs 'Ladkewale' split tracking, multi-event ceremony flows, and Indian wedding cultural logistics.",
+  "updatedAt": "2026-11-05T17:18:52.222742277Z",
+  "requestFeedback": true,
+  "userFacing": true
+}

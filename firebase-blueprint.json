@@ -1,0 +1,171 @@
+{
+  "entities": {
+    "Wedding": {
+      "title": "Wedding",
+      "description": "Master wedding configuration, couple names, and countdown date",
+      "type": "object",
+      "properties": {
+        "brideName": { "type": "string", "maxLength": 100 },
+        "groomName": { "type": "string", "maxLength": 100 },
+        "weddingDate": { "type": "string", "format": "date-time" },
+        "location": { "type": "string", "maxLength": 200 },
+        "currency": { "type": "string", "maxLength": 10 },
+        "primarySide": { "type": "string", "enum": ["ladkiwale", "ladkewale", "joint"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["brideName", "groomName", "weddingDate", "primarySide"]
+    },
+    "BudgetItem": {
+      "title": "BudgetItem",
+      "description": "Wedding expense or budget line item with Ladkiwale/Ladkewale/Shared attribution",
+      "type": "object",
+      "properties": {
+        "weddingId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 150 },
+        "category": { "type": "string", "enum": ["venue", "catering", "decor", "photography", "attire", "jewelry", "entertainment", "dhol_dj", "mehendi_artist", "invitations", "pandit", "gifts", "logistics", "other"] },
+        "event": { "type": "string", "enum": ["all", "roka", "mehendi", "haldi", "sangeet", "shaadi", "reception"] },
+        "estimatedAmount": { "type": "number" },
+        "actualAmount": { "type": "number" },
+        "paidAmount": { "type": "number" },
+        "side": { "type": "string", "enum": ["ladkiwale", "ladkewale", "shared"] },
+        "paymentStatus": { "type": "string", "enum": ["unpaid", "advance_paid", "fully_paid"] },
+        "notes": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["weddingId", "title", "category", "estimatedAmount", "paidAmount", "side", "paymentStatus"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "Ceremony preparation task assigned to family members or coordinators",
+      "type": "object",
+      "properties": {
+        "weddingId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 800 },
+        "event": { "type": "string", "enum": ["general", "roka", "mehendi", "haldi", "sangeet", "shaadi", "reception"] },
+        "status": { "type": "string", "enum": ["not_started", "in_progress", "blocked", "done", "todo", "completed"] },
+        "priority": { "type": "string", "enum": ["low", "medium", "high", "urgent"] },
+        "assignedSide": { "type": "string", "enum": ["ladkiwale", "ladkewale", "shared"] },
+        "assignedToName": { "type": "string", "maxLength": 100 },
+        "assignedFamilyRole": { "type": "string", "maxLength": 50 },
+        "assignedToPhone": { "type": "string", "maxLength": 20 },
+        "dueDate": { "type": "string", "format": "date" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["weddingId", "title", "status", "priority", "assignedSide", "assignedToName"]
+    },
+    "Vendor": {
+      "title": "Vendor",
+      "description": "Wedding vendors like Panditji, Mehendi artist, caterers, photographers, decor",
+      "type": "object",
+      "properties": {
+        "weddingId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 150 },
+        "category": { "type": "string", "enum": ["pandit", "mehendi_artist", "catering", "photography", "decor", "dhol_dj", "makeup_mua", "attire", "invitations", "venue", "transport"] },
+        "contactPerson": { "type": "string", "maxLength": 100 },
+        "phone": { "type": "string", "maxLength": 25 },
+        "email": { "type": "string", "maxLength": 100 },
+        "side": { "type": "string", "enum": ["ladkiwale", "ladkewale", "shared"] },
+        "totalQuotation": { "type": "number" },
+        "advancePaid": { "type": "number" },
+        "balanceDue": { "type": "number" },
+        "status": { "type": "string", "enum": ["shortlisted", "booked", "completed", "cancelled"] },
+        "notes": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["weddingId", "name", "category", "contactPerson", "phone", "side", "totalQuotation", "advancePaid", "status"]
+    },
+    "Guest": {
+      "title": "Guest",
+      "description": "Invited wedding guest with side attribution, ceremony RSVP, and dietary preferences",
+      "type": "object",
+      "properties": {
+        "weddingId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 150 },
+        "phone": { "type": "string", "maxLength": 25 },
+        "email": { "type": "string", "maxLength": 100 },
+        "side": { "type": "string", "enum": ["ladkiwale", "ladkewale", "mutual"] },
+        "familyGroup": { "type": "string", "maxLength": 100 },
+        "relation": { "type": "string", "maxLength": 100 },
+        "adultsCount": { "type": "number" },
+        "kidsCount": { "type": "number" },
+        "rsvpStatus": { "type": "string", "enum": ["pending", "attending", "declined", "tentative"] },
+        "dietaryPreference": { "type": "string", "enum": ["pure_veg", "jain", "non_veg", "swaminarayan", "standard"] },
+        "hotelStayRequired": { "type": "boolean" },
+        "roomAllocated": { "type": "string", "maxLength": 50 },
+        "pickupRequired": { "type": "boolean" },
+        "notes": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["weddingId", "name", "side", "adultsCount", "rsvpStatus", "dietaryPreference"]
+    },
+    "Moodboard": {
+      "title": "Moodboard",
+      "description": "Visual moodboard, color palette, dress code advice, and aesthetics per ceremony",
+      "type": "object",
+      "properties": {
+        "weddingId": { "type": "string", "maxLength": 128 },
+        "event": { "type": "string", "enum": ["roka", "mehendi", "haldi", "sangeet", "shaadi", "reception"] },
+        "title": { "type": "string", "maxLength": 150 },
+        "themeDescription": { "type": "string", "maxLength": 1000 },
+        "dressCodeAdviceLadkiwale": { "type": "string", "maxLength": 300 },
+        "dressCodeAdviceLadkewale": { "type": "string", "maxLength": 300 },
+        "keyDecorElements": { "type": "string", "maxLength": 500 },
+        "musicPlaylistNotes": { "type": "string", "maxLength": 500 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["weddingId", "event", "title", "themeDescription"]
+    },
+    "AlbumPhoto": {
+      "title": "AlbumPhoto",
+      "description": "Shared photo album captures with ceremony tag and family side",
+      "type": "object",
+      "properties": {
+        "weddingId": { "type": "string", "maxLength": 128 },
+        "event": { "type": "string", "enum": ["roka", "mehendi", "haldi", "sangeet", "shaadi", "reception", "candid"] },
+        "side": { "type": "string", "enum": ["ladkiwale", "ladkewale", "shared"] },
+        "imageUrl": { "type": "string", "maxLength": 1000 },
+        "caption": { "type": "string", "maxLength": 300 },
+        "uploadedByName": { "type": "string", "maxLength": 100 },
+        "uploadedAt": { "type": "string", "format": "date-time" },
+        "likes": { "type": "number" }
+      },
+      "required": ["weddingId", "event", "side", "imageUrl", "uploadedByName"]
+    }
+  },
+  "firestore": {
+    "/weddings/{weddingId}": {
+      "schema": { "$ref": "#/entities/Wedding" },
+      "description": "Master wedding configuration"
+    },
+    "/budget/{budgetId}": {
+      "schema": { "$ref": "#/entities/BudgetItem" },
+      "description": "Budget and expense line items with Ladkiwale/Ladkewale tracking"
+    },
+    "/tasks/{taskId}": {
+      "schema": { "$ref": "#/entities/Task" },
+      "description": "Ceremony preparation tasks and family assignments"
+    },
+    "/vendors/{vendorId}": {
+      "schema": { "$ref": "#/entities/Vendor" },
+      "description": "Contracted and shortlisted wedding vendors"
+    },
+    "/guests/{guestId}": {
+      "schema": { "$ref": "#/entities/Guest" },
+      "description": "Guest list, RSVPs, dietary needs, and accommodation"
+    },
+    "/moodboards/{moodboardId}": {
+      "schema": { "$ref": "#/entities/Moodboard" },
+      "description": "Ceremony aesthetic moodboards, palettes, and dress codes"
+    },
+    "/albums/{photoId}": {
+      "schema": { "$ref": "#/entities/AlbumPhoto" },
+      "description": "Shared ceremony photos and digital memory vault"
+    }
+  }
+}
