@@ -1,12 +1,10 @@
 {
-  "projectId": "trusty-stone-rlvvl",
-  "appId": "1:544880852204:web:e50a18bb2336ddf10af9c9",
-  "apiKey": "AIzaSyBBV8dVok4KN6mDB68Tw2wQ2in4vuWgjK4",
-  "authDomain": "trusty-stone-rlvvl.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-85c5f2f0-5291-4611-b7c6-6f5e977f1e5d",
-  "storageBucket": "trusty-stone-rlvvl.firebasestorage.app",
-  "messagingSenderId": "544880852204",
-  "measurementId": "",
-  "oAuthClientId": "544880852204-sgtl10ihp2pq2d9rkimsci2d53300lie.apps.googleusercontent.com",
-  "recaptchaSiteKey": ""
+  "projectId": "rasmready",
+  "appId": "1:132025410864:web:19214a4d9ed10f133ed4f5",
+  "apiKey": "AIzaSyAxu7f1URL0iXB75M-H3DJgqqUuHgFWg6w",
+  "authDomain": "rasmready.firebaseapp.com",
+  "firestoreDatabaseId": "(default)",
+  "storageBucket": "rasmready.firebasestorage.app",
+  "messagingSenderId": "132025410864",
+  "measurementId": "G-7LT1XP5BZM"
 }

@@ -23,7 +23,7 @@ export const MoodboardsView: React.FC<MoodboardsViewProps> = ({
   activeSide,
   onUpdateMoodboard,
 }) => {
-  const [selectedEvent, setSelectedEvent] = useState<CeremonyEvent>('haldi');
+  const [selectedBoardId, setSelectedBoardId] = useState(() => moodboards.find(board => board.event === 'haldi')?.id || moodboards[0]?.id || '');
   const [copiedHex, setCopiedHex] = useState<string | null>(null);
   const [copyError, setCopyError] = useState('');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -31,7 +31,7 @@ export const MoodboardsView: React.FC<MoodboardsViewProps> = ({
   const [newImageUrl, setNewImageUrl] = useState('');
   const [newImageCaption, setNewImageCaption] = useState('');
 
-  const currentBoard = moodboards.find(m => m.event === selectedEvent) || moodboards[0];
+  const currentBoard = moodboards.find(board => board.id === selectedBoardId) || moodboards[0];
 
   const [editFormData, setEditFormData] = useState({
     title: currentBoard?.title || '',
@@ -42,6 +42,7 @@ export const MoodboardsView: React.FC<MoodboardsViewProps> = ({
   });
 
   const eventTabs: Array<{ id: CeremonyEvent; label: string }> = [
+    { id: 'roka', label: 'Roka / Engagement' },
     { id: 'haldi', label: 'Haldi' },
     { id: 'mehendi', label: 'Mehendi' },
     { id: 'sangeet', label: 'Sangeet' },
@@ -132,21 +133,24 @@ export const MoodboardsView: React.FC<MoodboardsViewProps> = ({
 
       {/* Ceremony Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar border-b border-stone-200 dark:border-stone-800">
-        {eventTabs.map((tab) => {
-          const isActive = selectedEvent === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setSelectedEvent(tab.id)}
-              className={`px-4 py-2 text-xs font-semibold rounded-t-lg transition-all whitespace-nowrap border-b-2 ${
-                isActive
-                  ? 'border-rose-700 text-rose-800 dark:text-rose-300 bg-rose-50/60 dark:bg-rose-950/30'
-                  : 'border-transparent text-stone-500 hover:text-stone-800 dark:text-stone-400 hover:bg-stone-100/50'
-              }`}
-            >
-              {tab.label}
-            </button>
-          );
+        {eventTabs.flatMap(tab => {
+          const boards = moodboards.filter(board => board.event === tab.id);
+          return boards.map(board => {
+            const isActive = currentBoard?.id === board.id;
+            return (
+              <button
+                key={board.id}
+                onClick={() => setSelectedBoardId(board.id)}
+                className={`px-4 py-2 text-xs font-semibold rounded-t-lg transition-all whitespace-nowrap border-b-2 ${
+                  isActive
+                    ? 'border-rose-700 text-rose-800 dark:text-rose-300 bg-rose-50/60 dark:bg-rose-950/30'
+                    : 'border-transparent text-stone-500 hover:text-stone-800 dark:text-stone-400 hover:bg-stone-100/50'
+                }`}
+              >
+                {boards.length > 1 ? board.title : tab.label}
+              </button>
+            );
+          });
         })}
       </div>
 

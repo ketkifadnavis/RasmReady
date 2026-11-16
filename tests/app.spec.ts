@@ -508,3 +508,67 @@ test('clipboard denial shows errors rather than false success or uncaught except
   await expect(page.getByRole('alert')).toContainText('Could not copy');
   await expect(page.getByRole('button', { name: 'Copied!', exact: true })).toHaveCount(0);
 });
+
+test.describe('migrated wedding compatibility', () => {
+  test.use({ timezoneId: 'America/Los_Angeles' });
+
+  test('date-only weddings do not invent a ceremony time and imported engagement boards are accessible', async ({ page }) => {
+    await startWorkspace(page);
+    await page.getByRole('button', { name: 'Invite Family', exact: true }).click();
+    const inviteLink = await page.getByText(/^https?:\/\/.+\?join=/).innerText();
+    const weddingId = new URL(inviteLink).searchParams.get('join');
+    expect(weddingId).toBeTruthy();
+    await page.getByRole('button', { name: 'Done', exact: true }).click();
+    const root = `http://127.0.0.1:8080/v1/projects/demo-rasmready/databases/(default)/documents/weddings/${weddingId}`;
+    const headers = { Authorization: 'Bearer owner' };
+    const dateUpdate = await page.request.patch(`${root}?updateMask.fieldPaths=weddingDate`, {
+      headers, data: { fields: { weddingDate: { stringValue: '2027-03-08' } } },
+    });
+    expect(dateUpdate.ok()).toBe(true);
+    await expect(page.locator('main')).toContainText('8 March 2027');
+    await expect(page.locator('main')).toContainText('Time not scheduled');
+    await page.getByTitle('Edit Wedding Details', { exact: true }).click();
+    await expect(page.locator('form input[type="datetime-local"]')).toHaveValue('2027-03-08T00:00');
+    await page.getByPlaceholder('e.g. Chandra Mahal Palace & Gardens, Jaipur').fill('Migrated wedding venue');
+    await page.locator('form').getByRole('button', { name: 'Save Changes', exact: true }).click();
+    await waitForSave(page);
+    const savedWedding = await page.request.get(root, { headers });
+    expect((await savedWedding.json()).fields.weddingDate.stringValue).toBe('2027-03-08');
+    const boards = await page.request.get(`${root}/moodboards`, { headers });
+    expect(boards.ok()).toBe(true);
+    const { documents } = await boards.json();
+    const board = await page.request.patch(`${root}/moodboards/legacy-engagement`, {
+      headers,
+      data: { fields: {
+        ...documents[0].fields, id: { stringValue: 'legacy-engagement' },
+        event: { stringValue: 'roka' }, title: { stringValue: 'Imported engagement theme' },
+      } },
+    });
+    expect(board.ok()).toBe(true);
+    await navigate(page, 'Events & moodboards');
+    await page.getByRole('button', { name: 'Roka / Engagement', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Imported engagement theme', exact: true })).toBeVisible();
+    const secondBoard = await page.request.patch(`${root}/moodboards/legacy-engagement-two`, {
+      headers,
+      data: { fields: {
+        ...documents[0].fields, id: { stringValue: 'legacy-engagement-two' },
+        event: { stringValue: 'roka' }, title: { stringValue: 'Another imported engagement' },
+      } },
+    });
+    expect(secondBoard.ok()).toBe(true);
+    await page.getByRole('button', { name: 'Another imported engagement', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Another imported engagement', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Imported engagement theme', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Imported engagement theme', exact: true })).toBeVisible();
+  });
+});
+
+test('Google sign-in opens the provider flow and cancellation is reported', async ({ page }) => {
+  await page.goto('./');
+  const opened = page.waitForEvent('popup');
+  await page.getByRole('button', { name: 'Continue with Google', exact: true }).click();
+  const popup = await opened;
+  await expect(popup).toHaveURL(/127\.0\.0\.1:9099\/emulator\/auth\/handler/);
+  await popup.close();
+  await expect(page.getByRole('dialog').getByRole('alert')).toContainText('popup-closed-by-user', { timeout: 15_000 });
+});

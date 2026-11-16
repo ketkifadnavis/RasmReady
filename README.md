@@ -22,16 +22,18 @@ keys or private credentials in client files or `VITE_` environment variables.
    **Authentication > Sign-in method > Email/Password**.
 2. Add the deployed app's domain (and `localhost` for local development) to
    **Authentication > Settings > Authorized domains**.
-3. Ensure the named Firestore database in `firebase-applet-config.json` exists.
-   `firebase.json` targets that same database.
+3. Use the `rasmready` Firebase project and its `(default)` Firestore database.
+   `firebase-applet-config.json` and `firebase.json` target that same database.
 4. Sign in with an account authorized to manage that project and deploy the rules:
 
    ```sh
    npx firebase login
-   npx firebase deploy --only firestore:rules --project trusty-stone-rlvvl
+   npx firebase deploy --only firestore:rules --project rasmready
    ```
 
-These are real accounts: preset demo personas no longer sign users in. Register
+These are real accounts: preset demo personas no longer sign users in. Email/password
+and Google sign-in are supported; enable Google under Authentication's sign-in
+providers when configuring a new Firebase project. Register
 as a bride or groom to create a wedding, or as a family member to accept a private
 invitation. An existing account can create additional weddings from the wedding
 switcher. Keep invitation codes private; anyone signed in with the code can join
@@ -55,7 +57,8 @@ the `/RasmReady/` base path, and deploys to GitHub Pages. Pages must use
 **GitHub Actions** as its source in the repository settings.
 
 Add `ketkifadnavis.github.io` to Firebase Authentication's authorized domains.
-The hosted app uses real Firebase accounts and the configured named database.
+The hosted app uses real Firebase accounts and the `(default)` database in
+the `rasmready` project.
 
 Deploy Firestore rules separately using the setup command above when they change.
 

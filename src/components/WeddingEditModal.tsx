@@ -15,8 +15,10 @@ export const WeddingEditModal: React.FC<WeddingEditModalProps> = ({
   onClose,
   onSave,
 }) => {
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(wedding.weddingDate);
+  const [dateChanged, setDateChanged] = useState(false);
   const [formData, setFormData] = useState<WeddingConfig>(() => {
-    const date = new Date(wedding.weddingDate);
+    const date = new Date(dateOnly ? `${wedding.weddingDate}T00:00:00` : wedding.weddingDate);
     const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
     return { ...wedding, weddingDate: localDate.toISOString().slice(0, 16) };
   });
@@ -27,7 +29,7 @@ export const WeddingEditModal: React.FC<WeddingEditModalProps> = ({
     e.preventDefault();
     onSave({
       ...formData,
-      weddingDate: new Date(formData.weddingDate).toISOString(),
+      weddingDate: dateChanged ? new Date(formData.weddingDate).toISOString() : wedding.weddingDate,
       updatedAt: new Date().toISOString(),
     });
     onClose();
@@ -86,9 +88,10 @@ export const WeddingEditModal: React.FC<WeddingEditModalProps> = ({
               type="datetime-local"
               required
               value={formData.weddingDate}
-              onChange={(e) => setFormData({ ...formData, weddingDate: e.target.value })}
+              onChange={(e) => { setDateChanged(true); setFormData({ ...formData, weddingDate: e.target.value }); }}
               className="w-full px-3 py-2 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-rose-500"
             />
+            {dateOnly && <p className="mt-1 text-stone-500">No time was saved for this wedding. Choose the correct time if you change the date.</p>}
           </div>
 
           <div>

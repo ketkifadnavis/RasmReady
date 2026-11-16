@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup, signOut, updateProfile } from 'firebase/auth';
 import { X } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { createWedding } from '../lib/workspace';
@@ -84,6 +84,21 @@ export function AuthModal({ isOpen, onClose, currentUser, wedding, onSelectWeddi
     finally { setBusy(false); }
   };
 
+  const loginWithGoogle = async () => {
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      await signInWithPopup(auth, new GoogleAuthProvider());
+      setPassword('');
+      onClose();
+    } catch (error) {
+      console.error('Google sign-in failed:', error);
+      onError(error);
+      setError(error instanceof Error ? error.message : String(error));
+    } finally { setBusy(false); }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
       <section role="dialog" aria-modal="true" aria-labelledby="account-title" className="relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-stone-200 bg-[#FAF7F2] p-6 text-stone-900 shadow-xl dark:border-stone-700 dark:bg-[#1E1921] dark:text-white">
@@ -147,6 +162,11 @@ export function AuthModal({ isOpen, onClose, currentUser, wedding, onSelectWeddi
             </button>
           </fieldset>
         </form>
+        {!currentUser && (
+          <button type="button" disabled={busy} onClick={loginWithGoogle} className="mt-4 w-full rounded-xl border border-stone-300 p-3 text-sm font-semibold disabled:opacity-50 dark:border-stone-600">
+            Continue with Google
+          </button>
+        )}
         {currentUser && <button disabled={busy} onClick={() => { onClose(); onOpenJoinModal?.(); }} className="mt-4 w-full rounded-xl border p-2 text-sm">Join with Code/Link</button>}
       </section>
     </div>
