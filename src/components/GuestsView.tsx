@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { weddingContacts, weddingSchedule } from '../lib/weddingDetails';
 import { 
   Users, 
   Plus, 
@@ -25,10 +26,14 @@ import {
   SideFilter, 
   CeremonyEvent, 
   DietaryPreference, 
-  RSVPStatus 
+  RSVPStatus,
+  WeddingConfig,
+  TaskItem
 } from '../types/wedding';
 
 interface GuestsViewProps {
+  wedding: WeddingConfig;
+  tasks: TaskItem[];
   guests: GuestItem[];
   activeSide: SideFilter;
   onAdd: (guest: Omit<GuestItem, 'id' | 'createdAt' | 'updatedAt'>) => void;
@@ -37,6 +42,8 @@ interface GuestsViewProps {
 }
 
 export const GuestsView: React.FC<GuestsViewProps> = ({
+  wedding,
+  tasks,
   guests,
   activeSide,
   onAdd,
@@ -116,7 +123,7 @@ export const GuestsView: React.FC<GuestsViewProps> = ({
 
     const eventMeta: Record<string, { label: string; sub: string; color: string }> = {
       haldi: { label: 'Haldi Ceremony', sub: 'Phoolon ki Holi', color: '#F59E0B' },
-      mehendi: { label: "Ketki's Mehendi", sub: 'Henna & Music', color: '#059669' },
+      mehendi: { label: `${wedding.brideName}'s Mehendi`, sub: 'Henna & Music', color: '#059669' },
       sangeet: { label: 'Sangeet Gala', sub: 'Bollywood Night', color: '#6366F1' },
       shaadi: { label: 'Vedic Pheras & Vivaah', sub: 'Main Muhurat Ceremony', color: '#E11D48' },
       reception: { label: 'Grand Reception', sub: 'Dinner & Blessings', color: '#8B5CF6' },
@@ -244,26 +251,31 @@ export const GuestsView: React.FC<GuestsViewProps> = ({
   const [isECardModalOpen, setIsECardModalOpen] = useState(false);
   const [selectedECardEvent, setSelectedECardEvent] = useState<CeremonyEvent>('shaadi');
   const [copyFeedback, setCopyFeedback] = useState(false);
+  const [copyError, setCopyError] = useState('');
 
-  const keyContacts = [
-    { name: 'Vikram Mama', role: 'Logistics, Stay & Pickups', phone: '+91 98200 11223' },
-    { name: 'Pooja Bhabhi', role: 'Rituals, Haldi & Styling', phone: '+91 98444 55667' },
-    { name: 'Rajesh Chacha', role: 'Baraat & Transport', phone: '+91 98333 44556' },
-  ];
+  const keyContacts = weddingContacts(tasks);
+  const ceremony = weddingSchedule(wedding)[0];
 
   const generateWhatsAppMessage = (guest?: GuestItem, eventName?: CeremonyEvent) => {
     const guestGreeting = guest ? `Dear ${guest.name},` : 'Dear Family & Friends,';
     const eventDetail = eventName && eventName !== 'all' ? `for the *${eventName.toUpperCase()}* ceremony` : 'for the auspicious wedding ceremonies';
     
-    const text = `🌸 *RasmReady Wedding Invitation* 🌸\n\n${guestGreeting}\nWith the divine blessings of our elders, we cordially invite you and your family to celebrate the joyful union of *Ketki & Hardik* ${eventDetail} in Nagpur! 🪷\n\n📍 *Venue & Map:* Signature Resorts, Nagpur\n👉 https://maps.google.com/?q=Signature+Resorts+Nagpur\n\n📅 *Main Muhurat:* 28 February 2027 (Godhuli Muhurat)\n\n👔 *Dress Codes:*\n• Haldi: Yellow gotapatti / traditional\n• Mehendi: Mint green & floral\n• Sangeet: Royal indigo & shimmer\n• Vivaah: Regal crimson silk & ivory\n\nKindly confirm your RSVP and dietary preferences (Pure Veg / Jain):\n👉 https://rasmready.app/rsvp${guest ? `?id=${guest.id}` : ''}\n\n📞 *Family Coordinators for Travel & Stay:*\n• Vikram Mama: +91 98200 11223\n• Pooja Bhabhi: +91 98444 55667\n• Rajesh Chacha: +91 98333 44556\n\nWith love and respect,\nKetki & Hardik and Families 🙏`;
+    const text = `🌸 *RasmReady Wedding Invitation* 🌸\n\n${guestGreeting}\nWe cordially invite you and your family to celebrate the joyful union of *${wedding.brideName} & ${wedding.groomName}* ${eventDetail}! 🪷\n\n📍 *Venue & Map:* ${wedding.location}\nhttps://maps.google.com/?q=${encodeURIComponent(wedding.location)}\n\n📅 *Wedding:* ${ceremony.date}, ${ceremony.time}\n\nPlease reply to this invitation with your RSVP and dietary preferences.\n\n${keyContacts.map(contact => `${contact.name} (${contact.role}): ${contact.phone}`).join('\n')}\n\nWith love and respect,\n${wedding.brideName} & ${wedding.groomName} and Families 🙏`;
     return encodeURIComponent(text);
   };
 
-  const handleCopyInviteText = (guest?: GuestItem, eventName?: CeremonyEvent) => {
+  const handleCopyInviteText = async (guest?: GuestItem, eventName?: CeremonyEvent) => {
     const rawText = decodeURIComponent(generateWhatsAppMessage(guest, eventName));
-    navigator.clipboard.writeText(rawText);
-    setCopyFeedback(true);
-    setTimeout(() => setCopyFeedback(false), 2500);
+    setCopyFeedback(false);
+    setCopyError('');
+    try {
+      await navigator.clipboard.writeText(rawText);
+      setCopyFeedback(true);
+      setTimeout(() => setCopyFeedback(false), 2500);
+    } catch (error) {
+      console.error('Invitation copy failed:', error);
+      setCopyError('Could not copy the invitation. Allow clipboard access and try again.');
+    }
   };
 
   return (
@@ -311,7 +323,7 @@ export const GuestsView: React.FC<GuestsViewProps> = ({
               <PieChart className="w-4 h-4 text-rose-200" />
             </div>
             <div>
-              <h2 className="font-serif font-bold text-base text-[#38232B] dark:text-stone-100 flex items-center gap-2">
+              <h2 className="font-serif font-bold text-base text-[#38232B] dark:text-stone-100 flex flex-wrap items-center gap-2">
                 <span>Multi-Event RSVP Attendance Ring</span>
                 <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
                   Live Attendance
@@ -1045,7 +1057,7 @@ export const GuestsView: React.FC<GuestsViewProps> = ({
               {/* Official Bride & Groom Logo */}
               <div className="w-16 h-20 mx-auto rounded-t-full rounded-b-md overflow-hidden border-2 border-[#C9A984]/80 shadow-md bg-[#FAF7F2] my-2">
                 <img
-                  src="/assets/aistudio/Screenshot_2026-11-06_at_12.09.50_AM_0ee25bbd.png"
+                  src={`${import.meta.env.BASE_URL}assets/aistudio/Screenshot_2026-11-06_at_12.09.50_AM_0ee25bbd.png`}
                   alt="Bride and Groom Logo"
                   className="w-full h-full object-cover"
                 />
@@ -1056,7 +1068,7 @@ export const GuestsView: React.FC<GuestsViewProps> = ({
               </p>
 
               <h4 className="font-serif text-2xl sm:text-3xl font-bold text-[#38232B] dark:text-stone-100 mt-1">
-                Ketki &amp; Hardik
+                {wedding.brideName} &amp; {wedding.groomName}
               </h4>
 
               <p className="text-xs text-stone-600 dark:text-stone-300 max-w-md mx-auto mt-2 leading-relaxed">
@@ -1067,14 +1079,14 @@ export const GuestsView: React.FC<GuestsViewProps> = ({
               <div className="mt-4 p-3.5 rounded-xl bg-white/80 dark:bg-[#2D2431]/80 border border-[#E5DFD6] dark:border-[#382E3C] max-w-md mx-auto text-xs space-y-1.5 text-left">
                 <div className="flex items-center justify-between">
                   <span className="font-serif font-bold text-stone-900 dark:text-stone-100 capitalize">
-                    {selectedECardEvent === 'all' ? 'Wedding Festivities (Feb 28, 2027)' : `${selectedECardEvent} Ceremony`}
+                    {selectedECardEvent === 'all' ? `Wedding Festivities (${ceremony.date})` : `${selectedECardEvent} Ceremony`}
                   </span>
                   <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-semibold">
                     Godhuli Muhurat
                   </span>
                 </div>
                 <p className="text-stone-500 dark:text-stone-400">
-                  📍 <strong>Venue:</strong> Signature Resorts, Nagpur
+                  📍 <strong>Venue:</strong> {wedding.location}
                 </p>
                 <p className="text-[#8B4459] dark:text-rose-300">
                   👗 <strong>Dress Code:</strong> {selectedECardEvent === 'haldi' ? 'Yellow gotapatti' : selectedECardEvent === 'mehendi' ? 'Mint green & florals' : selectedECardEvent === 'sangeet' ? 'Royal indigo glamour' : 'Regal crimson silk & gold'}
@@ -1101,7 +1113,9 @@ export const GuestsView: React.FC<GuestsViewProps> = ({
             {/* Action Buttons: 1-Click WhatsApp & Copy */}
             <div className="mt-5 flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-[#EFECE6] dark:border-[#2C2430]">
               <div className="text-xs text-stone-500">
-                {copyFeedback ? (
+                {copyError ? (
+                  <span role="alert" className="text-rose-700 dark:text-rose-300">{copyError}</span>
+                ) : copyFeedback ? (
                   <span className="text-emerald-600 font-semibold flex items-center gap-1">
                     <Check className="w-3.5 h-3.5" />
                     Copied full invite text &amp; contacts to clipboard!

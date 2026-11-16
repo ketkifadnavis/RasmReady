@@ -1,11 +1,17 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { connectAuthEmulator, getAuth } from 'firebase/auth';
+import { connectFirestoreEmulator, initializeFirestore } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+const emulatorHost = import.meta.env.VITE_FIREBASE_EMULATOR_HOST;
+const app = initializeApp(emulatorHost ? { ...firebaseConfig, projectId: 'demo-rasmready' } : firebaseConfig);
+export const db = initializeFirestore(app, { ignoreUndefinedProperties: true }, emulatorHost ? '(default)' : firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
+
+if (emulatorHost) {
+  connectAuthEmulator(auth, `http://${emulatorHost}:9099`);
+  connectFirestoreEmulator(db, emulatorHost, 8080);
+}
 
 export enum OperationType {
   CREATE = 'create',
@@ -52,16 +58,4 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
-}
-
-export async function testConnection(): Promise<boolean> {
-  try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-    return true;
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn('Firebase client appears offline, using local state.');
-    }
-    return false;
-  }
 }

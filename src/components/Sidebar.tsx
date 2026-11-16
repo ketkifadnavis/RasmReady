@@ -4,6 +4,7 @@ import {
   Palette, 
   CheckSquare, 
   IndianRupee, 
+  Briefcase,
   ShoppingBag, 
   ListChecks, 
   Users, 
@@ -56,6 +57,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'moodboards', label: 'Events & moodboards', icon: Palette },
     { id: 'tasks', label: 'Tasks', icon: CheckSquare, badge: pendingTasksCount > 0 ? pendingTasksCount : undefined },
     { id: 'budget', label: 'Money tracker', icon: IndianRupee },
+    { id: 'vendors', label: 'Vendors', icon: Briefcase },
     { id: 'shopping', label: 'Shopping list', icon: ShoppingBag },
     { id: 'checklists', label: 'Couple checklists', icon: ListChecks },
     { id: 'guests', label: 'Guests', icon: Users },
@@ -109,7 +111,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="mt-4 p-2.5 rounded-2xl bg-[#EFECE6]/70 dark:bg-[#251F29] border border-[#E4DFD7] dark:border-[#382E3C] flex items-center gap-2.5">
             <div className="w-10 h-12 rounded-t-full rounded-b-md overflow-hidden border border-[#C9A984]/70 shadow-2xs shrink-0 bg-[#FAF7F2]">
               <img 
-                src="/assets/aistudio/Screenshot_2026-11-06_at_12.09.50_AM_0ee25bbd.png" 
+                src={`${import.meta.env.BASE_URL}assets/aistudio/Screenshot_2026-11-06_at_12.09.50_AM_0ee25bbd.png`}
                 alt={`${wedding.brideName} & ${wedding.groomName} Logo`} 
                 className="w-full h-full object-cover"
               />
@@ -119,7 +121,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {wedding.brideName} &amp; {wedding.groomName}
               </p>
               <p className="text-[10px] text-stone-500 dark:text-stone-400">
-                28 Feb 2027 · Vivaah
+                {new Date(wedding.weddingDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · Vivaah
               </p>
             </div>
           </div>

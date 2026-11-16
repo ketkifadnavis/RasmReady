@@ -65,6 +65,11 @@ export const PhotoVaultView: React.FC<PhotoVaultViewProps> = ({
   });
 
   const processFile = (file: File) => {
+    if (file.size > 650 * 1024) {
+      setFormData(prev => ({ ...prev, imageUrl: '' }));
+      setUploadError('Choose an image of 650 KB or smaller. Resize larger photos before uploading.');
+      return;
+    }
     if (!file.type.startsWith('image/')) {
       setUploadError('Please select a valid image file (JPG, PNG, WebP, HEIC).');
       return;

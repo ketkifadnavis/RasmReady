@@ -13,9 +13,10 @@ import {
   X,
   Filter
 } from 'lucide-react';
-import { ChecklistItem, CeremonyEvent } from '../types/wedding';
+import { ChecklistItem, CeremonyEvent, WeddingConfig } from '../types/wedding';
 
 interface CoupleChecklistsViewProps {
+  wedding: WeddingConfig;
   items: ChecklistItem[];
   onToggleItem: (id: string) => void;
   onAddItem: (item: Omit<ChecklistItem, 'id'>) => void;
@@ -23,6 +24,7 @@ interface CoupleChecklistsViewProps {
 }
 
 export const CoupleChecklistsView: React.FC<CoupleChecklistsViewProps> = ({
+  wedding,
   items,
   onToggleItem,
   onAddItem,
@@ -115,7 +117,7 @@ export const CoupleChecklistsView: React.FC<CoupleChecklistsViewProps> = ({
             Couple checklists
           </h1>
           <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400 mt-1">
-            For Ketki &amp; Hardik. For every little moment.
+            For {wedding.brideName} &amp; {wedding.groomName}. For every little moment.
           </p>
         </div>
 
@@ -153,7 +155,7 @@ export const CoupleChecklistsView: React.FC<CoupleChecklistsViewProps> = ({
                 : 'text-stone-600 dark:text-stone-300 hover:text-stone-900'
             }`}
           >
-            Bride (Ketki)
+            Bride ({wedding.brideName})
           </button>
           <button
             onClick={() => setActiveTarget('groom')}
@@ -163,7 +165,7 @@ export const CoupleChecklistsView: React.FC<CoupleChecklistsViewProps> = ({
                 : 'text-stone-600 dark:text-stone-300 hover:text-stone-900'
             }`}
           >
-            Groom (Hardik)
+            Groom ({wedding.groomName})
           </button>
         </div>
 
@@ -342,8 +344,8 @@ export const CoupleChecklistsView: React.FC<CoupleChecklistsViewProps> = ({
                     onChange={(e) => setNewItemTarget(e.target.value as any)}
                     className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-[#29222E] border border-[#DFD8CE] dark:border-[#3A303F] text-stone-900 dark:text-stone-100"
                   >
-                    <option value="bride">Bride (Ketki)</option>
-                    <option value="groom">Groom (Hardik)</option>
+                    <option value="bride">Bride ({wedding.brideName})</option>
+                    <option value="groom">Groom ({wedding.groomName})</option>
                     <option value="both">Both (Couple)</option>
                   </select>
                 </div>

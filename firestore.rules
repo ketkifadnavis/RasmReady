@@ -1,102 +1,85 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Global default-deny catch-all
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // Helper functions
-    function isValidId(id) {
-      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
-
-    function incoming() {
-      return request.resource.data;
-    }
-
-    function existing() {
-      return resource.data;
-    }
-
-    function isSignedIn() {
+    function signedIn() {
       return request.auth != null;
     }
 
-    // Connection test doc
-    match /test/connection {
-      allow read, write: if true;
+    function member(weddingId) {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/weddings/$(weddingId)/members/$(request.auth.uid));
     }
 
-    // Weddings collection
+    function admin(weddingId) {
+      return member(weddingId) &&
+        get(/databases/$(database)/documents/weddings/$(weddingId)/members/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    function validWedding(data, weddingId) {
+      return data.id == weddingId &&
+        data.brideName is string && data.brideName.size() > 0 && data.brideName.size() <= 100 &&
+        data.groomName is string && data.groomName.size() > 0 && data.groomName.size() <= 100 &&
+        data.weddingDate is string && data.location is string && data.location.size() <= 250;
+    }
+
     match /weddings/{weddingId} {
-      allow read: if isValidId(weddingId);
-      allow create, update: if isValidId(weddingId) &&
-        incoming().brideName is string && incoming().brideName.size() <= 100 &&
-        incoming().groomName is string && incoming().groomName.size() <= 100 &&
-        incoming().weddingDate is string;
-      allow delete: if isValidId(weddingId) && isSignedIn();
+      allow read: if member(weddingId);
+      allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid &&
+        validWedding(request.resource.data, weddingId);
+      allow update: if admin(weddingId) && validWedding(request.resource.data, weddingId) &&
+        request.resource.data.ownerId == resource.data.ownerId &&
+        request.resource.data.inviteCode == resource.data.inviteCode;
+
+      match /members/{uid} {
+        allow read: if signedIn() && (request.auth.uid == uid || member(weddingId));
+        allow create: if signedIn() && uid == request.auth.uid &&
+          request.resource.data.userId == uid &&
+          request.resource.data.name is string && request.resource.data.email == request.auth.token.email &&
+          request.resource.data.role is string && request.resource.data.role.size() <= 100 &&
+          request.resource.data.side in ['ladkiwale', 'ladkewale', 'mutual'] &&
+          (
+            (getAfter(/databases/$(database)/documents/weddings/$(weddingId)).data.ownerId == uid &&
+              request.resource.data.isAdmin == true)
+            ||
+            (request.resource.data.isAdmin == false &&
+              request.resource.data.inviteCode == get(/databases/$(database)/documents/weddings/$(weddingId)).data.inviteCode)
+          );
+      }
+
+      match /{kind}/{itemId} {
+        function planningCollection() {
+          return kind in ['budget', 'tasks', 'vendors', 'guests', 'moodboards', 'photos', 'shopping', 'checklists', 'team'];
+        }
+        function canWrite() {
+          return signedIn() && existsAfter(/databases/$(database)/documents/weddings/$(weddingId)/members/$(request.auth.uid));
+        }
+        function validItem() {
+          return request.resource.data.id == itemId &&
+            (!('weddingId' in request.resource.data) || request.resource.data.weddingId == weddingId);
+        }
+        allow read: if planningCollection() && member(weddingId);
+        allow create, update: if planningCollection() && canWrite() && validItem();
+        allow delete: if planningCollection() && member(weddingId);
+      }
     }
 
-    // Budget collection
-    match /budget/{budgetId} {
-      allow read: if isValidId(budgetId);
-      allow create, update: if isValidId(budgetId) &&
-        incoming().weddingId is string && incoming().weddingId.size() <= 128 &&
-        incoming().title is string && incoming().title.size() <= 150 &&
-        incoming().category is string &&
-        incoming().side in ['ladkiwale', 'ladkewale', 'shared'];
-      allow delete: if isValidId(budgetId);
+    match /users/{uid}/weddings/{weddingId} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() && request.auth.uid == uid &&
+        request.resource.data.weddingId == weddingId &&
+        request.resource.data.isAdmin == getAfter(/databases/$(database)/documents/weddings/$(weddingId)/members/$(uid)).data.isAdmin &&
+        request.resource.data.userRole == getAfter(/databases/$(database)/documents/weddings/$(weddingId)/members/$(uid)).data.role &&
+        request.resource.data.userSide == getAfter(/databases/$(database)/documents/weddings/$(weddingId)/members/$(uid)).data.side;
     }
 
-    // Tasks collection
-    match /tasks/{taskId} {
-      allow read: if isValidId(taskId);
-      allow create, update: if isValidId(taskId) &&
-        incoming().weddingId is string && incoming().weddingId.size() <= 128 &&
-        incoming().title is string && incoming().title.size() <= 200 &&
-        incoming().assignedSide in ['ladkiwale', 'ladkewale', 'shared'];
-      allow delete: if isValidId(taskId);
-    }
-
-    // Vendors collection
-    match /vendors/{vendorId} {
-      allow read: if isValidId(vendorId);
-      allow create, update: if isValidId(vendorId) &&
-        incoming().weddingId is string && incoming().weddingId.size() <= 128 &&
-        incoming().name is string && incoming().name.size() <= 150 &&
-        incoming().side in ['ladkiwale', 'ladkewale', 'shared'];
-      allow delete: if isValidId(vendorId);
-    }
-
-    // Guests collection
-    match /guests/{guestId} {
-      allow read: if isValidId(guestId);
-      allow create, update: if isValidId(guestId) &&
-        incoming().weddingId is string && incoming().weddingId.size() <= 128 &&
-        incoming().name is string && incoming().name.size() <= 150 &&
-        incoming().side in ['ladkiwale', 'ladkewale', 'mutual'];
-      allow delete: if isValidId(guestId);
-    }
-
-    // Moodboards collection
-    match /moodboards/{moodboardId} {
-      allow read: if isValidId(moodboardId);
-      allow create, update: if isValidId(moodboardId) &&
-        incoming().weddingId is string && incoming().weddingId.size() <= 128 &&
-        incoming().event in ['roka', 'mehendi', 'haldi', 'sangeet', 'shaadi', 'reception'] &&
-        incoming().title is string && incoming().title.size() <= 150;
-      allow delete: if isValidId(moodboardId);
-    }
-
-    // Photo albums collection
-    match /albums/{photoId} {
-      allow read: if isValidId(photoId);
-      allow create, update: if isValidId(photoId) &&
-        incoming().weddingId is string && incoming().weddingId.size() <= 128 &&
-        incoming().imageUrl is string && incoming().imageUrl.size() <= 1000;
-      allow delete: if isValidId(photoId);
+    match /invites/{code} {
+      allow get: if signedIn();
+      allow create: if signedIn() && request.resource.data.inviteCode == code &&
+        getAfter(/databases/$(database)/documents/weddings/$(request.resource.data.id)).data.ownerId == request.auth.uid &&
+        getAfter(/databases/$(database)/documents/weddings/$(request.resource.data.id)).data.inviteCode == code &&
+        validWedding(request.resource.data, request.resource.data.id);
+      allow update: if admin(resource.data.id) && request.resource.data.id == resource.data.id &&
+        request.resource.data.inviteCode == code && validWedding(request.resource.data, resource.data.id);
     }
   }
 }

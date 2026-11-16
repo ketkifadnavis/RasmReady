@@ -30,12 +30,14 @@ export const InviteFamilyModal: React.FC<InviteFamilyModalProps> = ({
   const [selectedRoleType, setSelectedRoleType] = useState<'family' | 'guest' | 'vip'>('family');
   const [isCopied, setIsCopied] = useState(false);
   const [isCodeCopied, setIsCodeCopied] = useState(false);
+  const [copyError, setCopyError] = useState('');
 
   if (!isOpen) return null;
 
-  const inviteCode = wedding.inviteCode || 'RR-KH27';
-  const appBaseUrl = window.location.origin || 'https://rasmready.app';
-  const joinLink = `${appBaseUrl}/?join=${wedding.id}&code=${inviteCode}&side=${selectedSide}`;
+  const inviteCode = wedding.inviteCode || '';
+  const appBaseUrl = new URL(import.meta.env.BASE_URL, window.location.origin).href;
+  const joinLink = `${appBaseUrl}?join=${encodeURIComponent(wedding.id)}&code=${encodeURIComponent(inviteCode)}&side=${selectedSide}`;
+  const weddingDate = new Date(wedding.weddingDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 
   const sideLabel = selectedSide === 'ladkiwale' 
     ? "Ladkiwale (Bride's Family)" 
@@ -44,20 +46,30 @@ export const InviteFamilyModal: React.FC<InviteFamilyModalProps> = ({
     : "Shared / Mutual Family";
 
   const generateWhatsAppMessage = () => {
-    const text = `🌸 *Wedding Invitation to Join RasmReady* 🌸\n\nNamaste! 🙏\n*${wedding.brideName} & ${wedding.groomName}* cordially invite you to join our private wedding planning & celebration portal on *RasmReady* as part of *${sideLabel}*!\n\n📍 *Venue:* ${wedding.location}\n📅 *Wedding Date:* 28 February 2027 (${wedding.muhuratTime || 'Godhuli Muhurat'})\n\n👉 *Click here to sign up & join our wedding team:*\n${joinLink}\n\n🔑 *Wedding Join Code:* *${inviteCode}*\n\nCollaborate on tasks, coordinate shopping, view ceremony moodboards, and share memories together! 🪷\n\nWith love,\n${wedding.brideName} & ${wedding.groomName}`;
+    const text = `🌸 *Wedding Invitation to Join RasmReady* 🌸\n\nNamaste! 🙏\n*${wedding.brideName} & ${wedding.groomName}* cordially invite you to join our private wedding planning & celebration portal on *RasmReady* as part of *${sideLabel}*!\n\n📍 *Venue:* ${wedding.location}\n📅 *Wedding Date:* ${weddingDate} (${wedding.muhuratTime || 'Wedding ceremony'})\n\n👉 *Click here to sign up & join our wedding team:*\n${joinLink}\n\n🔑 *Wedding Join Code:* *${inviteCode}*\n\nCollaborate on tasks, coordinate shopping, view ceremony moodboards, and share memories together! 🪷\n\nWith love,\n${wedding.brideName} & ${wedding.groomName}`;
     return encodeURIComponent(text);
   };
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(joinLink);
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2500);
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(joinLink);
+      setCopyError('');
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2500);
+    } catch (error) {
+      setCopyError(error instanceof Error ? error.message : 'Could not copy the invitation. Select and copy the link below.');
+    }
   };
 
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(inviteCode);
-    setIsCodeCopied(true);
-    setTimeout(() => setIsCodeCopied(false), 2500);
+  const handleCopyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(inviteCode);
+      setCopyError('');
+      setIsCodeCopied(true);
+      setTimeout(() => setIsCodeCopied(false), 2500);
+    } catch (error) {
+      setCopyError(error instanceof Error ? error.message : 'Could not copy the code. Copy it manually below.');
+    }
   };
 
   const handleOpenWhatsApp = () => {
@@ -110,7 +122,7 @@ export const InviteFamilyModal: React.FC<InviteFamilyModalProps> = ({
           <p className="text-xs text-[#EADBD0] mt-0.5 flex items-center gap-2">
             <span>📍 {wedding.location}</span>
             <span>•</span>
-            <span>28 Feb 2027</span>
+            <span>{weddingDate}</span>
           </p>
 
           <div className="mt-3 pt-3 border-t border-white/15 flex items-center justify-between text-xs">
@@ -121,6 +133,7 @@ export const InviteFamilyModal: React.FC<InviteFamilyModalProps> = ({
 
         {/* Invite Customization */}
         <div className="space-y-4 text-xs">
+          {copyError && <p role="alert" className="rounded-xl bg-rose-100 p-3 text-rose-900">{copyError}</p>}
           {/* Side Selector */}
           <div>
             <label className="block font-semibold text-stone-700 dark:text-stone-300 mb-1.5">

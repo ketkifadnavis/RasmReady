@@ -15,7 +15,11 @@ export const WeddingEditModal: React.FC<WeddingEditModalProps> = ({
   onClose,
   onSave,
 }) => {
-  const [formData, setFormData] = useState<WeddingConfig>({ ...wedding });
+  const [formData, setFormData] = useState<WeddingConfig>(() => {
+    const date = new Date(wedding.weddingDate);
+    const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+    return { ...wedding, weddingDate: localDate.toISOString().slice(0, 16) };
+  });
 
   if (!isOpen) return null;
 
@@ -23,6 +27,7 @@ export const WeddingEditModal: React.FC<WeddingEditModalProps> = ({
     e.preventDefault();
     onSave({
       ...formData,
+      weddingDate: new Date(formData.weddingDate).toISOString(),
       updatedAt: new Date().toISOString(),
     });
     onClose();
@@ -80,8 +85,8 @@ export const WeddingEditModal: React.FC<WeddingEditModalProps> = ({
             <input
               type="datetime-local"
               required
-              value={formData.weddingDate.slice(0, 16)}
-              onChange={(e) => setFormData({ ...formData, weddingDate: new Date(e.target.value).toISOString() })}
+              value={formData.weddingDate}
+              onChange={(e) => setFormData({ ...formData, weddingDate: e.target.value })}
               className="w-full px-3 py-2 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-rose-500"
             />
           </div>

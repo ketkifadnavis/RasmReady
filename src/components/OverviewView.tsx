@@ -23,6 +23,7 @@ import {
   FileDown
 } from 'lucide-react';
 import { WeddingSummaryModal } from './WeddingSummaryModal';
+import { weddingSchedule } from '../lib/weddingDetails';
 import { 
   BudgetItem, 
   TaskItem, 
@@ -70,16 +71,16 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 
   // Interactive Blessings / Rose petals shower counter
   const [blessingsCount, setBlessingsCount] = useState<number>(() => {
-    const saved = localStorage.getItem('sv_blessings_count');
+    const saved = localStorage.getItem(`sv_blessings_count:${wedding.id}`);
     return saved ? parseInt(saved, 10) : 151;
   });
 
   const celebrationTargetDates: Record<CountdownTarget, { label: string; date: string; muhurat: string }> = {
-    shaadi: { label: 'Vivaah & Pheras', date: '2027-02-28T18:30:00', muhurat: 'Godhuli Muhurat (6:30 PM)' },
-    haldi: { label: 'Haldi Ceremony', date: '2026-12-17T10:00:00', muhurat: 'Shubh Pratah Muhurat (10:00 AM)' },
-    sangeet: { label: 'Sangeet Night', date: '2026-12-17T19:30:00', muhurat: 'Bespoke Evening Gala (7:30 PM)' },
-    mehendi: { label: "Ketki's Mehendi", date: '2026-12-16T16:00:00', muhurat: 'Auspicious Afternoon (4:00 PM)' },
-    engagement: { label: 'Engagement', date: '2026-12-15T18:30:00', muhurat: 'Sagan Muhurat (6:30 PM)' },
+    shaadi: { label: 'Vivaah & Pheras', date: wedding.weddingDate, muhurat: wedding.muhuratTime || 'Wedding ceremony' },
+    haldi: { label: 'Haldi Ceremony', date: '', muhurat: 'Not scheduled' },
+    sangeet: { label: 'Sangeet Night', date: '', muhurat: 'Not scheduled' },
+    mehendi: { label: `${wedding.brideName}'s Mehendi`, date: '', muhurat: 'Not scheduled' },
+    engagement: { label: 'Engagement', date: '', muhurat: 'Not scheduled' },
   };
 
   const currentTarget = celebrationTargetDates[countdownTarget] || celebrationTargetDates.shaadi;
@@ -138,13 +139,16 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 
     setBlessingsCount(prev => {
       const updated = prev + 1;
-      localStorage.setItem('sv_blessings_count', updated.toString());
+      localStorage.setItem(`sv_blessings_count:${wedding.id}`, updated.toString());
       return updated;
     });
   };
 
   // Google Calendar Link generator
-  const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Wedding of ${wedding.brideName} & ${wedding.groomName} - ${currentTarget.label}`)}&dates=20270228T130000Z/20270228T190000Z&details=${encodeURIComponent(`RasmReady wedding celebrations of ${wedding.brideName} & ${wedding.groomName} at ${wedding.location}. Muhurat: ${currentTarget.muhurat}`)}&location=${encodeURIComponent(wedding.location)}`;
+  const calendarStart = new Date(currentTarget.date);
+  const calendarEnd = new Date(calendarStart.getTime() + 2 * 60 * 60 * 1000);
+  const calendarDate = (date: Date) => date.toISOString().replaceAll(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+  const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Wedding of ${wedding.brideName} & ${wedding.groomName} - ${currentTarget.label}`)}&dates=${calendarDate(calendarStart)}/${calendarDate(calendarEnd)}&details=${encodeURIComponent(`RasmReady wedding celebrations of ${wedding.brideName} & ${wedding.groomName} at ${wedding.location}. Muhurat: ${currentTarget.muhurat}`)}&location=${encodeURIComponent(wedding.location)}`;
 
   // Filter items by side
   const filteredBudget = budgetItems.filter(b => activeSide === 'all' || b.side === activeSide || b.side === 'shared');
@@ -165,14 +169,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   const jainCount = attendingGuests.filter(g => g.dietaryPreference === 'jain').length;
   const hotelRooms = attendingGuests.filter(g => g.hotelStayRequired).length;
 
-  const celebrations = [
-    { id: 'engagement', name: 'Engagement & Ring Ceremony', date: 'Dec 15, 2026', time: '6:30 PM', theme: 'Peach & Champagne' },
-    { id: 'mehendi_hardik', name: "Hardik's Mehendi", date: 'Dec 16, 2026', time: '11:00 AM', theme: 'Mint & Marigold' },
-    { id: 'haldi', name: 'Haldi Phoolon Ki Holika', date: 'Dec 17, 2026', time: '10:00 AM', theme: 'Pithani Sunshine' },
-    { id: 'mehendi_ketki', name: "Ketki's Mehendi Soirée", date: 'Dec 17, 2026', time: '4:00 PM', theme: 'Boho Henna Grove' },
-    { id: 'sangeet', name: 'Bollywood Sangeet Night', date: 'Dec 17, 2026', time: '7:30 PM', theme: 'Midnight Glamour' },
-    { id: 'shaadi', name: 'Vivaah & Vedic Pheras', date: 'Feb 28, 2027', time: '6:00 PM', theme: 'Sindoor & Rajwada' },
-  ];
+  const celebrations = weddingSchedule(wedding);
 
   return (
     <div className="space-y-7">
@@ -215,7 +212,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#FAF7F2] dark:bg-[#251E28] border border-[#E4DFD7] dark:border-[#382E3C] hover:border-[#8B4459] text-xs font-medium text-stone-700 dark:text-stone-300 shadow-2xs hover:bg-white dark:hover:bg-[#2D2430] transition-all"
             >
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Switch / Test Personas</span>
+              <span>Your account</span>
             </button>
           )}
         </div>
@@ -237,7 +234,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
             <div className="relative group shrink-0">
               <div className="w-28 sm:w-32 rounded-t-full rounded-b-2xl overflow-hidden shadow-md border-2 border-[#C9A984]/70 dark:border-[#8E6E52] bg-[#FAF7F2] dark:bg-[#251E28] transition-transform duration-300 group-hover:scale-105">
                 <img
-                  src="/assets/aistudio/Screenshot_2026-11-06_at_12.09.50_AM_0ee25bbd.png"
+                  src={`${import.meta.env.BASE_URL}assets/aistudio/Screenshot_2026-11-06_at_12.09.50_AM_0ee25bbd.png`}
                   alt={`${wedding.brideName} & ${wedding.groomName} Vivaah Official Logo`}
                   className="w-full h-auto object-cover block"
                 />
@@ -255,7 +252,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               </h2>
 
               <p className="text-xs text-stone-600 dark:text-stone-300 font-medium">
-                28 February 2027 · {wedding.muhuratTime || 'Godhuli Muhurat'}
+                {celebrations[0].date} · {celebrations[0].time}
               </p>
 
               <p className="text-[11px] text-stone-400 italic font-serif">
@@ -325,6 +322,8 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                 return (
                   <button
                     key={key}
+                    disabled={!celebrationTargetDates[key].date}
+                    title={celebrationTargetDates[key].date ? undefined : 'This ceremony has not been scheduled'}
                     onClick={() => setCountdownTarget(key)}
                     className={`px-2.5 py-1 rounded-full font-semibold transition-all whitespace-nowrap ${
                       isActive 
@@ -628,7 +627,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           </div>
 
           <div className="mt-5 p-3 rounded-xl bg-[#EFECE6] dark:bg-[#2A232E] border border-[#E5DFD6] dark:border-[#382E3C] text-[11px] text-stone-500 dark:text-stone-400">
-            ✨ You are right on schedule for the February 28, 2027 celebrations!
+            ✨ Planning together for the {celebrations[0].date} celebrations.
           </div>
         </div>
 
@@ -643,7 +642,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               <span>Celebration journey</span>
             </h2>
             <p className="text-xs text-stone-400 mt-0.5">
-              The rituals, ceremonies, and milestone celebrations planned for Ketki &amp; Hardik
+              The rituals, ceremonies, and milestone celebrations planned for {wedding.brideName} &amp; {wedding.groomName}
             </p>
           </div>
           <button

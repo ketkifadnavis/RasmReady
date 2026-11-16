@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { WeddingConfig, BudgetItem, TaskItem, VendorItem, GuestItem } from '../types/wedding';
+import { weddingContacts, weddingSchedule } from './weddingDetails';
 
 interface PdfExportOptions {
   wedding: WeddingConfig;
@@ -16,6 +17,7 @@ export function generateWeddingSummaryPdf({
   vendors,
   guests,
 }: PdfExportOptions) {
+  const celebrations = weddingSchedule(wedding);
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -56,7 +58,7 @@ export function generateWeddingSummaryPdf({
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(230, 220, 225);
-  doc.text(`${wedding.location}  *  Vivaah Muhurat: 28 Feb 2027 (Godhuli)`, pageWidth / 2, margin + 25, { align: 'center' });
+  doc.text(`${wedding.location}  *  ${celebrations[0].date}`, pageWidth / 2, margin + 25, { align: 'center' });
 
   doc.setFontSize(7.5);
   doc.setTextColor(210, 200, 205);
@@ -135,16 +137,7 @@ export function generateWeddingSummaryPdf({
   };
 
   // 1. CEREMONY SCHEDULE & MUHURATS
-  renderSectionHeader('1. Auspicious Ceremonies & Muhurats', '6 Major Celebrations');
-
-  const celebrations = [
-    { name: 'Engagement & Sagan', date: 'Dec 15, 2026', time: '6:30 PM', muhurat: 'Sagan Muhurat (6:30 PM)', theme: 'Peach & Champagne' },
-    { name: "Hardik's Mehendi", date: 'Dec 16, 2026', time: '11:00 AM', muhurat: 'Shubh Labh (11:00 AM)', theme: 'Mint Green & Marigold' },
-    { name: 'Haldi Phoolon ki Holi', date: 'Dec 17, 2026', time: '10:00 AM', muhurat: 'Shubh Pratah (10:00 AM)', theme: 'Yellow & Gotapatti' },
-    { name: "Ketki's Mehendi Soiree", date: 'Dec 17, 2026', time: '4:00 PM', muhurat: 'Auspicious Afternoon', theme: 'Boho Henna Grove' },
-    { name: 'Bollywood Sangeet Night', date: 'Dec 17, 2026', time: '7:30 PM', muhurat: 'Bespoke Evening Gala', theme: 'Indigo & Royal Shimmer' },
-    { name: 'Vivaah & Vedic Pheras', date: 'Feb 28, 2027', time: '6:00 PM', muhurat: 'Godhuli Muhurat (6:30 PM)', theme: 'Sindoor & Rajwada' },
-  ];
+  renderSectionHeader('1. Auspicious Ceremonies & Muhurats', 'Scheduled Celebrations');
 
   celebrations.forEach((cel, i) => {
     if (i % 2 === 0) {
@@ -245,11 +238,7 @@ export function generateWeddingSummaryPdf({
   // 4. FAMILY COORDINATORS & HOSPITALITY CONTACTS
   renderSectionHeader('4. Family Hospitality & Coordinator Directory', 'Travel & Stay Assistance');
 
-  const coordinators = [
-    { name: 'Vikram Mama', role: 'Outstation Logistics, Airport Pickups & Signature Resort Room Allocation', phone: '+91 98200 11223' },
-    { name: 'Pooja Bhabhi', role: 'Rituals, Pooja Samagri, Haldi Phool & Ladies Henna Scheduling', phone: '+91 98444 55667' },
-    { name: 'Rajesh Chacha', role: 'Baraat Assembly, Band Baja, Vintage Car & Safa Bandhai Team', phone: '+91 98333 44556' },
-  ];
+  const coordinators = weddingContacts(tasks);
 
   coordinators.forEach((coord, i) => {
     doc.setFillColor(lightBg[0], lightBg[1], lightBg[2]);
@@ -282,7 +271,7 @@ export function generateWeddingSummaryPdf({
   doc.setFontSize(7);
   doc.setTextColor(mutedStone[0], mutedStone[1], mutedStone[2]);
   doc.text('RasmReady * Har taiyaari, apno ke saath. Shared family wedding preparation portal.', margin, footerY);
-  doc.text(`Page 1 of 1  *  Nagpur 2027`, margin + contentWidth, footerY, { align: 'right' });
+  doc.text('Page 1 of 1', margin + contentWidth, footerY, { align: 'right' });
 
   // Save the PDF
   doc.save(`RasmReady_${wedding.brideName}_${wedding.groomName}_Summary.pdf`);

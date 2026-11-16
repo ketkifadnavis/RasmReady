@@ -25,6 +25,7 @@ export const MoodboardsView: React.FC<MoodboardsViewProps> = ({
 }) => {
   const [selectedEvent, setSelectedEvent] = useState<CeremonyEvent>('haldi');
   const [copiedHex, setCopiedHex] = useState<string | null>(null);
+  const [copyError, setCopyError] = useState('');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddImageModalOpen, setIsAddImageModalOpen] = useState(false);
   const [newImageUrl, setNewImageUrl] = useState('');
@@ -48,10 +49,17 @@ export const MoodboardsView: React.FC<MoodboardsViewProps> = ({
     { id: 'reception', label: 'Reception' },
   ];
 
-  const handleCopyColor = (hex: string) => {
-    navigator.clipboard.writeText(hex);
-    setCopiedHex(hex);
-    setTimeout(() => setCopiedHex(null), 2000);
+  const handleCopyColor = async (hex: string) => {
+    setCopiedHex(null);
+    setCopyError('');
+    try {
+      await navigator.clipboard.writeText(hex);
+      setCopiedHex(hex);
+      setTimeout(() => setCopiedHex(null), 2000);
+    } catch (error) {
+      console.error('Color copy failed:', error);
+      setCopyError('Could not copy the color. Allow clipboard access and try again.');
+    }
   };
 
   const openEditModal = () => {
@@ -119,6 +127,8 @@ export const MoodboardsView: React.FC<MoodboardsViewProps> = ({
           <span>Edit Moodboard</span>
         </button>
       </div>
+
+      {copyError && <p role="alert" className="text-xs text-rose-700 dark:text-rose-300">{copyError}</p>}
 
       {/* Ceremony Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar border-b border-stone-200 dark:border-stone-800">

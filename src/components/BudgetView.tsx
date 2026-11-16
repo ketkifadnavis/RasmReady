@@ -256,7 +256,7 @@ export const BudgetView: React.FC<BudgetViewProps> = ({
             <div>
               <p className="font-semibold">Admin-Only Budget Lock Active</p>
               <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 mt-0.5">
-                Sensitive costs and amounts are hidden from family collaborators. Unlock using Bride &amp; Groom PIN (2027).
+                Amounts are hidden on this device. This screen lock does not restrict collaborator access.
               </p>
             </div>
           </div>
@@ -726,7 +726,7 @@ export const BudgetView: React.FC<BudgetViewProps> = ({
               </div>
 
               <p className="text-[10px] text-stone-400 pt-1">
-                Default PIN: <span className="font-mono font-semibold">2027</span> · Admins (Ketki &amp; Hardik)
+                Default screen PIN: <span className="font-mono font-semibold">2027</span>
               </p>
             </form>
           </div>

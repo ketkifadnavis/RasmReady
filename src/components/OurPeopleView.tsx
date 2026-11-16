@@ -63,13 +63,13 @@ export const OurPeopleView: React.FC<OurPeopleViewProps> = ({
     onAddMember({
       name: name.trim(),
       role: role.trim() || 'Wedding Committee Member',
-      email: email.trim() || `${name.toLowerCase().replace(/\s+/g, '')}@wedding.family`,
+      email: email.trim(),
       relation: relation,
       avatarLetter: name.trim().charAt(0).toUpperCase(),
       tasksCount: 0,
     });
 
-    setInviteSuccessMsg(`Invite link generated & sent to ${name}!`);
+    setInviteSuccessMsg(`Directory entry added for ${name.trim()}.`);
     setTimeout(() => {
       setInviteSuccessMsg('');
       setIsInviteModalOpen(false);
@@ -88,7 +88,7 @@ export const OurPeopleView: React.FC<OurPeopleViewProps> = ({
             Our people
           </h1>
           <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400 mt-1">
-            Your very own wedding dream team.
+            Your wedding team directory. Adding or removing entries does not change workspace access.
           </p>
         </div>
 
@@ -204,7 +204,7 @@ export const OurPeopleView: React.FC<OurPeopleViewProps> = ({
             <div className="flex items-center justify-between pb-3 border-b border-[#EFECE6] dark:border-[#2C2430]">
               <h3 className="font-serif text-lg font-bold text-[#38232B] dark:text-stone-100 flex items-center gap-2">
                 <UserPlus className="w-4 h-4 text-[#8B4459]" />
-                <span>Invite to wedding dream team</span>
+                <span>Add to wedding team directory</span>
               </h3>
               <button
                 onClick={() => setIsInviteModalOpen(false)}
@@ -220,7 +220,7 @@ export const OurPeopleView: React.FC<OurPeopleViewProps> = ({
                   <ShieldCheck className="w-6 h-6" />
                 </div>
                 <p className="font-serif font-bold text-stone-800 dark:text-stone-100">{inviteSuccessMsg}</p>
-                <p className="text-xs text-stone-400">Adding to family workspace...</p>
+                <p className="text-xs text-stone-400">To give them workspace access, share a link using Invite Family.</p>
               </div>
             ) : (
               <form onSubmit={handleInviteSubmit} className="mt-4 space-y-3.5">
@@ -292,7 +292,7 @@ export const OurPeopleView: React.FC<OurPeopleViewProps> = ({
                     className="px-5 py-2 text-xs font-semibold rounded-xl bg-[#4E2634] hover:bg-[#3D1D28] text-white shadow-xs flex items-center gap-1.5"
                   >
                     <Send className="w-3.5 h-3.5" />
-                    <span>Send invite</span>
+                    <span>Add to directory</span>
                   </button>
                 </div>
               </form>

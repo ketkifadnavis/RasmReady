@@ -276,7 +276,7 @@ export const VendorsView: React.FC<VendorsViewProps> = ({
 
                   <div className="flex items-center justify-between gap-2 pt-1">
                     <a
-                      href={`https://wa.me/${cleanPhone}?text=Namaste%20${encodeURIComponent(vendor.contactPerson)},%20regarding%20the%20wedding%20services%20for%20Ketki%20%26%20Hardik.`}
+                      href={`https://wa.me/${cleanPhone}?text=Namaste%20${encodeURIComponent(vendor.contactPerson)},%20regarding%20your%20wedding%20services.`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs font-semibold hover:bg-emerald-100 transition-colors"

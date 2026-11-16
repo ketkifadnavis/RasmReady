@@ -55,8 +55,8 @@ export const WeddingSwitcher: React.FC<WeddingSwitcherProps> = ({
     location: currentWedding.location,
     userRole: currentUser?.role || 'Bride & Groom Space',
     userSide: currentUser?.side || 'mutual',
-    isAdmin: currentUser?.isAdmin || true,
-    inviteCode: currentWedding.inviteCode || 'RR-KH27',
+    isAdmin: currentUser?.isAdmin || false,
+    inviteCode: currentWedding.inviteCode || '',
   };
 
   const totalWeddingsCount = joinedWeddings.length > 0 ? joinedWeddings.length : 1;
@@ -188,6 +188,12 @@ export const WeddingSwitcher: React.FC<WeddingSwitcherProps> = ({
           </div>
 
           {/* Action Footer */}
+          <button
+            onClick={() => { setIsOpen(false); onOpenCreateWedding?.(); }}
+            className="mt-3 w-full rounded-xl border border-stone-300 px-3 py-2 font-semibold dark:border-stone-700"
+          >
+            Create another wedding
+          </button>
           <div className="mt-3 pt-2.5 border-t border-[#EFECE6] dark:border-[#2C2430] grid grid-cols-2 gap-2">
             <button
               onClick={() => {

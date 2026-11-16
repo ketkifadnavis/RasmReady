@@ -40,7 +40,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
   const [formData, setFormData] = useState({
     name: '',
     event: 'shaadi' as CeremonyEvent,
-    personInCharge: 'Ketki',
+    personInCharge: '',
     quantity: 1,
     estimatedCost: 2000,
     referenceLink: '',
@@ -52,7 +52,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
     setFormData({
       name: '',
       event: 'shaadi',
-      personInCharge: 'Ketki',
+      personInCharge: '',
       quantity: 1,
       estimatedCost: 2000,
       referenceLink: '',

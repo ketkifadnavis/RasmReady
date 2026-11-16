@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { WeddingConfig, BudgetItem, TaskItem, VendorItem, GuestItem } from '../types/wedding';
 import { generateWeddingSummaryPdf } from '../lib/pdfExport';
+import { weddingContacts, weddingSchedule } from '../lib/weddingDetails';
 
 interface WeddingSummaryModalProps {
   isOpen: boolean;
@@ -37,6 +38,7 @@ export const WeddingSummaryModal: React.FC<WeddingSummaryModalProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [actionError, setActionError] = useState('');
 
   if (!isOpen) return null;
 
@@ -53,17 +55,12 @@ export const WeddingSummaryModal: React.FC<WeddingSummaryModalProps> = ({
   const jainGuests = attendingGuests.filter(g => g.dietaryPreference === 'jain').length;
   const hotelRooms = attendingGuests.filter(g => g.hotelStayRequired).length;
 
-  const celebrations = [
-    { name: 'Engagement & Sagan', date: 'Dec 15, 2026', time: '6:30 PM', muhurat: 'Sagan Muhurat (6:30 PM)', theme: 'Peach & Champagne' },
-    { name: "Hardik's Mehendi", date: 'Dec 16, 2026', time: '11:00 AM', muhurat: 'Shubh Labh (11:00 AM)', theme: 'Mint Green & Marigold' },
-    { name: 'Haldi Phoolon ki Holi', date: 'Dec 17, 2026', time: '10:00 AM', muhurat: 'Shubh Pratah (10:00 AM)', theme: 'Yellow & Gotapatti' },
-    { name: "Ketki's Mehendi Soirée", date: 'Dec 17, 2026', time: '4:00 PM', muhurat: 'Auspicious Afternoon (4:00 PM)', theme: 'Boho Henna Grove' },
-    { name: 'Bollywood Sangeet Night', date: 'Dec 17, 2026', time: '7:30 PM', muhurat: 'Bespoke Evening Gala (7:30 PM)', theme: 'Indigo & Royal Shimmer' },
-    { name: 'Vivaah & Vedic Pheras', date: 'Feb 28, 2027', time: '6:00 PM', muhurat: 'Godhuli Muhurat (6:30 PM)', theme: 'Sindoor & Rajwada' },
-  ];
+  const celebrations = weddingSchedule(wedding);
+  const contacts = weddingContacts(tasks);
 
   const handleDownloadPdf = () => {
     setIsDownloading(true);
+    setActionError('');
     try {
       generateWeddingSummaryPdf({
         wedding,
@@ -74,6 +71,7 @@ export const WeddingSummaryModal: React.FC<WeddingSummaryModalProps> = ({
       });
     } catch (err) {
       console.error('PDF Generation Error:', err);
+      setActionError('Could not generate the PDF. Please try again.');
     } finally {
       setIsDownloading(false);
     }
@@ -83,11 +81,11 @@ export const WeddingSummaryModal: React.FC<WeddingSummaryModalProps> = ({
     window.print();
   };
 
-  const handleCopyWhatsApp = () => {
+  const handleCopyWhatsApp = async () => {
     const text = `🌸 *RASMREADY — WEDDING PLANNING SUMMARY* 🌸
 *${wedding.brideName} & ${wedding.groomName}*
 📍 Venue: ${wedding.location}
-📅 Vivaah Muhurat: 28 February 2027 (Godhuli Muhurat)
+📅 Vivaah Muhurat: ${celebrations[0].date}, ${celebrations[0].time}
 
 📊 *EXECUTIVE SUMMARY*
 • Total Estimated Budget: ₹${(totalBudget / 100000).toFixed(2)} Lakhs (Paid: ₹${(totalPaid / 100000).toFixed(2)} Lakhs)
@@ -95,23 +93,23 @@ export const WeddingSummaryModal: React.FC<WeddingSummaryModalProps> = ({
 • Confirmed Guests: ${totalAttendingGuests} Attending (${jainGuests} Jain Meals, ${hotelRooms} Hotel Rooms)
 
 📅 *CEREMONIES & MUHURATS*
-1. Engagement: Dec 15, 6:30 PM (Peach & Champagne)
-2. Hardik's Mehendi: Dec 16, 11:00 AM (Mint & Marigold)
-3. Haldi Phoolon ki Holi: Dec 17, 10:00 AM (Pithani Sunshine)
-4. Ketki's Mehendi: Dec 17, 4:00 PM (Boho Henna)
-5. Sangeet Night: Dec 17, 7:30 PM (Midnight Glamour)
-6. Vedic Pheras: Feb 28, 2027, 6:00 PM (Godhuli 6:30 PM)
+${celebrations.map(celebration => `${celebration.name}: ${celebration.date}, ${celebration.time}`).join('\n')}
 
 📞 *FAMILY COORDINATORS*
-• Vikram Mama (Logistics & Stay): +91 98200 11223
-• Pooja Bhabhi (Rituals & Henna): +91 98444 55667
-• Rajesh Chacha (Baraat & Transport): +91 98333 44556
+${contacts.map(contact => `${contact.name} (${contact.role}): ${contact.phone}`).join('\n')}
 
 _Generated via RasmReady • Har taiyaari, apno ke saath._`;
 
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+    setCopied(false);
+    setActionError('');
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch (error) {
+      console.error('Summary copy failed:', error);
+      setActionError('Could not copy the summary. Allow clipboard access and try again.');
+    }
   };
 
   return (
@@ -171,6 +169,8 @@ _Generated via RasmReady • Har taiyaari, apno ke saath._`;
           </div>
         </div>
 
+        {actionError && <p role="alert" className="px-6 py-3 text-xs text-rose-700 dark:text-rose-300">{actionError}</p>}
+
         {/* Printable Patrika Document Container */}
         <div className="p-6 sm:p-8 space-y-6 max-h-[75vh] overflow-y-auto print:max-h-none print:p-0 print:overflow-visible text-stone-900 dark:text-stone-100 font-sans">
           
@@ -183,7 +183,7 @@ _Generated via RasmReady • Har taiyaari, apno ke saath._`;
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-center sm:text-left">
               <div className="w-16 h-20 rounded-t-full rounded-b-lg overflow-hidden border-2 border-[#C9A984] shadow-md shrink-0 bg-[#FAF7F2]">
                 <img
-                  src="/assets/aistudio/Screenshot_2026-11-06_at_12.09.50_AM_0ee25bbd.png"
+                  src={`${import.meta.env.BASE_URL}assets/aistudio/Screenshot_2026-11-06_at_12.09.50_AM_0ee25bbd.png`}
                   alt="Bride and Groom Logo"
                   className="w-full h-full object-cover"
                 />
@@ -198,7 +198,7 @@ _Generated via RasmReady • Har taiyaari, apno ke saath._`;
                 <p className="text-xs text-[#EADBD0] font-medium flex items-center justify-center sm:justify-start gap-2">
                   <span>📍 {wedding.location}</span>
                   <span>•</span>
-                  <span>Vivaah Muhurat: 28 Feb 2027 (Godhuli)</span>
+                  <span>Vivaah Muhurat: {celebrations[0].date}, {celebrations[0].time}</span>
                 </p>
                 <div className="text-[10px] text-white/60">
                   Shared Family Wedding Workspace · Generated via RasmReady
@@ -375,32 +375,15 @@ _Generated via RasmReady • Har taiyaari, apno ke saath._`;
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-              <div className="p-3 rounded-xl bg-[#FAF7F2] dark:bg-[#1E1821] border border-[#E8E2D8] dark:border-[#382E3C]">
-                <p className="font-bold text-stone-900 dark:text-stone-100">Vikram Mama</p>
-                <p className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">Stay, Logistics &amp; Airport Pickups</p>
-                <a href="tel:+919820011223" className="inline-flex items-center gap-1 text-[11px] font-mono text-emerald-700 dark:text-emerald-400 font-semibold mt-2">
-                  <Phone className="w-3 h-3" />
-                  +91 98200 11223
-                </a>
-              </div>
-
-              <div className="p-3 rounded-xl bg-[#FAF7F2] dark:bg-[#1E1821] border border-[#E8E2D8] dark:border-[#382E3C]">
-                <p className="font-bold text-stone-900 dark:text-stone-100">Pooja Bhabhi</p>
-                <p className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">Rituals, Samagri &amp; Henna</p>
-                <a href="tel:+919844455667" className="inline-flex items-center gap-1 text-[11px] font-mono text-emerald-700 dark:text-emerald-400 font-semibold mt-2">
-                  <Phone className="w-3 h-3" />
-                  +91 98444 55667
-                </a>
-              </div>
-
-              <div className="p-3 rounded-xl bg-[#FAF7F2] dark:bg-[#1E1821] border border-[#E8E2D8] dark:border-[#382E3C]">
-                <p className="font-bold text-stone-900 dark:text-stone-100">Rajesh Chacha</p>
-                <p className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">Baraat Assembly, DJ &amp; Safa</p>
-                <a href="tel:+919833344556" className="inline-flex items-center gap-1 text-[11px] font-mono text-emerald-700 dark:text-emerald-400 font-semibold mt-2">
-                  <Phone className="w-3 h-3" />
-                  +91 98333 44556
-                </a>
-              </div>
+              {contacts.map(contact => (
+                <div key={contact.phone} className="rounded-xl border border-stone-200 p-3 dark:border-stone-700">
+                  <p className="font-bold">{contact.name}</p>
+                  <p className="mt-1 text-stone-500">{contact.role}</p>
+                  <a href={`tel:${contact.phone.replace(/[^+0-9]/g, '')}`} className="mt-2 inline-flex items-center gap-1 text-emerald-700">
+                    <Phone className="h-3 w-3" />{contact.phone}
+                  </a>
+                </div>
+              ))}
             </div>
           </div>
 

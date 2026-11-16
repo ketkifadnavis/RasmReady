@@ -28,24 +28,9 @@ import {
   SideFilter,
   ShoppingItem,
   ChecklistItem,
-  TeamMember,
-  AppUser,
-  WeddingMembership
+  TeamMember
 } from './types/wedding';
-import { 
-  initialWeddingConfig, 
-  initialBudgetItems, 
-  initialTasks, 
-  initialVendors, 
-  initialGuests, 
-  initialMoodboards, 
-  initialAlbumPhotos,
-  initialShoppingItems,
-  initialChecklistItems,
-  initialTeamMembers,
-  sampleKnownWeddings
-} from './lib/defaultData';
-import { testConnection } from './lib/firebase';
+import { useWeddingCollection, useWorkspace } from './lib/useWorkspace';
 import { 
   Search, 
   Plus, 
@@ -105,22 +90,40 @@ export default function App() {
   // Multi-wedding and Family Invite States
   const [isInviteFamilyModalOpen, setIsInviteFamilyModalOpen] = useState<boolean>(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState<boolean>(false);
-  const [joinCodeInitial, setJoinCodeInitial] = useState<string>('RR-KH27');
+  const [joinCodeInitial, setJoinCodeInitial] = useState<string>('');
   const [joinSideInitial, setJoinSideInitial] = useState<'ladkiwale' | 'ladkewale' | 'mutual'>('ladkiwale');
 
-  const [joinedWeddings, setJoinedWeddings] = useState<WeddingMembership[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('sv_user_weddings');
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch (e) {
-          // fallback
-        }
-      }
-    }
-    return sampleKnownWeddings;
-  });
+  const workspace = useWorkspace();
+  const { currentUser, joinedWeddings, wedding, reportError } = workspace;
+  const setWedding = workspace.saveWedding;
+  const collectionScope = { weddingId: workspace.activeWeddingId, scope: workspace.scope };
+  const budgetState = useWeddingCollection<BudgetItem>(collectionScope.weddingId, collectionScope.scope, 'budget', reportError);
+  const taskState = useWeddingCollection<TaskItem>(collectionScope.weddingId, collectionScope.scope, 'tasks', reportError);
+  const vendorState = useWeddingCollection<VendorItem>(collectionScope.weddingId, collectionScope.scope, 'vendors', reportError);
+  const guestState = useWeddingCollection<GuestItem>(collectionScope.weddingId, collectionScope.scope, 'guests', reportError);
+  const moodboardState = useWeddingCollection<MoodboardItem>(collectionScope.weddingId, collectionScope.scope, 'moodboards', reportError);
+  const photoState = useWeddingCollection<AlbumPhotoItem>(collectionScope.weddingId, collectionScope.scope, 'photos', reportError);
+  const shoppingState = useWeddingCollection<ShoppingItem>(collectionScope.weddingId, collectionScope.scope, 'shopping', reportError);
+  const checklistState = useWeddingCollection<ChecklistItem>(collectionScope.weddingId, collectionScope.scope, 'checklists', reportError);
+  const teamState = useWeddingCollection<TeamMember>(collectionScope.weddingId, collectionScope.scope, 'team', reportError);
+  const { items: budgetItems, setItems: setBudgetItems } = budgetState;
+  const { items: tasks, setItems: setTasks } = taskState;
+  const { items: vendors, setItems: setVendors } = vendorState;
+  const { items: guests, setItems: setGuests } = guestState;
+  const { items: moodboards, setItems: setMoodboards } = moodboardState;
+  const { items: photos, setItems: setPhotos } = photoState;
+  const { items: shoppingItems, setItems: setShoppingItems } = shoppingState;
+  const { items: checklistItems, setItems: setChecklistItems } = checklistState;
+  const { items: teamMembers, setItems: setTeamMembers } = teamState;
+  const collections = [budgetState, taskState, vendorState, guestState, moodboardState, photoState, shoppingState, checklistState, teamState];
+  const loading = workspace.authLoading || workspace.loading || collections.some(state => state.loading);
+  const hasWorkspace = !!currentUser && !!wedding.id && !loading;
+  const saving = workspace.pending > 0 || collections.some(state => state.pending);
+
+  const handleSelectWedding = (id: string) => {
+    workspace.selectWedding(id);
+    setActiveSide('all');
+  };
 
   // URL query parameter detection for shared invite links (e.g. ?join=...&code=RR-KH27)
   useEffect(() => {
@@ -128,264 +131,14 @@ export default function App() {
       const params = new URLSearchParams(window.location.search);
       const joinParam = params.get('join');
       const codeParam = params.get('code');
-      const sideParam = params.get('side') as 'ladkiwale' | 'ladkewale' | 'mutual' | null;
+      const sideParam = params.get('side');
 
       if (joinParam || codeParam) {
         if (codeParam) setJoinCodeInitial(codeParam.toUpperCase());
-        if (sideParam) setJoinSideInitial(sideParam);
+        if (sideParam === 'ladkiwale' || sideParam === 'ladkewale' || sideParam === 'mutual') setJoinSideInitial(sideParam);
         setIsJoinModalOpen(true);
       }
     }
-  }, []);
-
-  // User Authentication & Role State
-  const defaultUser: AppUser = {
-    id: 'usr-ketki',
-    name: 'Ketki',
-    email: 'ketki.wed@gmail.com',
-    side: 'ladkiwale',
-    role: 'Bride (Owner & Admin)',
-    isAdmin: true,
-    avatarLetter: 'K',
-    activeWeddingId: 'wedding-ketki-hardik-2027',
-    weddings: sampleKnownWeddings,
-  };
-
-  const [currentUser, setCurrentUser] = useState<AppUser>(() => {
-    const saved = localStorage.getItem('sv_current_user');
-    return saved ? JSON.parse(saved) : defaultUser;
-  });
-
-  const handleLogin = (user: AppUser) => {
-    setCurrentUser(user);
-    localStorage.setItem('sv_current_user', JSON.stringify(user));
-    if (user.side === 'ladkiwale' || user.side === 'ladkewale') {
-      setActiveSide(user.side);
-    }
-
-    // Dynamic couple update based on registered user
-    const roleLower = user.role.toLowerCase();
-    const nameLower = user.name.toLowerCase();
-
-    if (roleLower.includes('bride') || nameLower.includes('ketki')) {
-      setWedding(prev => {
-        const updated = { ...prev, brideName: user.name };
-        localStorage.setItem('sv_wedding', JSON.stringify(updated));
-        localStorage.setItem('sv_registered_bride', user.name);
-        return updated;
-      });
-    } else if (roleLower.includes('groom') || nameLower.includes('hardik')) {
-      setWedding(prev => {
-        const updated = { ...prev, groomName: user.name };
-        localStorage.setItem('sv_wedding', JSON.stringify(updated));
-        localStorage.setItem('sv_registered_groom', user.name);
-        return updated;
-      });
-    }
-  };
-
-  const handleLogout = () => {
-    setCurrentUser(defaultUser);
-    localStorage.setItem('sv_current_user', JSON.stringify(defaultUser));
-    setActiveSide('all');
-  };
-
-  // Switch between joined weddings
-  const handleSelectWedding = (weddingId: string) => {
-    const target = joinedWeddings.find(w => w.weddingId === weddingId) || sampleKnownWeddings.find(w => w.weddingId === weddingId);
-    if (!target) return;
-
-    const updatedWedding: WeddingConfig = {
-      ...wedding,
-      id: target.weddingId,
-      brideName: target.brideName,
-      groomName: target.groomName,
-      weddingDate: target.weddingDate,
-      location: target.location,
-      muhuratTime: target.muhuratTime || 'Godhuli Muhurat (6:30 PM)',
-      inviteCode: target.inviteCode,
-    };
-    setWedding(updatedWedding);
-    localStorage.setItem('sv_wedding', JSON.stringify(updatedWedding));
-    localStorage.setItem('sv_active_wedding_id', weddingId);
-
-    // Adapt user's role and side for this wedding
-    if (target.userSide === 'ladkiwale' || target.userSide === 'ladkewale') {
-      setActiveSide(target.userSide);
-    } else {
-      setActiveSide('all');
-    }
-
-    setCurrentUser(prev => prev ? {
-      ...prev,
-      role: target.userRole,
-      side: target.userSide,
-      activeWeddingId: target.weddingId,
-    } : prev);
-  };
-
-  // Enrolling a member into a wedding
-  const handleJoinWedding = (membership: WeddingMembership, userToEnroll?: AppUser) => {
-    setJoinedWeddings(prev => {
-      const exists = prev.some(w => w.weddingId === membership.weddingId);
-      const updated = exists ? prev.map(w => w.weddingId === membership.weddingId ? membership : w) : [...prev, membership];
-      localStorage.setItem('sv_user_weddings', JSON.stringify(updated));
-      return updated;
-    });
-
-    if (userToEnroll) {
-      handleLogin(userToEnroll);
-    }
-
-    handleSelectWedding(membership.weddingId);
-
-    if (userToEnroll) {
-      setTeamMembers(prev => {
-        const exists = prev.some(m => m.name.toLowerCase() === userToEnroll.name.toLowerCase());
-        if (exists) return prev;
-        return [
-          ...prev,
-          {
-            id: `tm-${Date.now()}`,
-            name: userToEnroll.name,
-            role: userToEnroll.role,
-            email: userToEnroll.email,
-            relation: userToEnroll.role,
-            avatarLetter: userToEnroll.avatarLetter,
-            tasksCount: 0,
-          }
-        ];
-      });
-    }
-  };
-
-  // Core Wedding data state with localStorage persistence and dynamic couple synchronization
-  const [wedding, setWedding] = useState<WeddingConfig>(() => {
-    const saved = localStorage.getItem('sv_wedding');
-    const savedBride = localStorage.getItem('sv_registered_bride');
-    const savedGroom = localStorage.getItem('sv_registered_groom');
-
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // Cleanse legacy mock names (Priya / Rohan) if stored in user's browser
-        const hasLegacyNames = 
-          parsed.brideName?.toLowerCase().includes('priya') || 
-          parsed.groomName?.toLowerCase().includes('rohan') ||
-          parsed.id?.includes('rohan-priya');
-
-        const activeBride = hasLegacyNames ? (savedBride || 'Ketki') : (savedBride || parsed.brideName || 'Ketki');
-        const activeGroom = hasLegacyNames ? (savedGroom || 'Hardik') : (savedGroom || parsed.groomName || 'Hardik');
-
-        return {
-          ...parsed,
-          id: 'wedding-ketki-hardik-2027',
-          brideName: activeBride,
-          groomName: activeGroom,
-          location: parsed.location || 'Signature Resorts, Nagpur',
-          weddingDate: parsed.weddingDate || '2027-02-28T18:30:00',
-          muhuratTime: parsed.muhuratTime || 'Godhuli Muhurat (6:30 PM)',
-        };
-      } catch (e) {
-        return initialWeddingConfig;
-      }
-    }
-    return {
-      ...initialWeddingConfig,
-      brideName: savedBride || initialWeddingConfig.brideName,
-      groomName: savedGroom || initialWeddingConfig.groomName,
-    };
-  });
-
-  const [budgetItems, setBudgetItems] = useState<BudgetItem[]>(() => {
-    const saved = localStorage.getItem('sv_budget');
-    return saved ? JSON.parse(saved) : initialBudgetItems;
-  });
-
-  const [tasks, setTasks] = useState<TaskItem[]>(() => {
-    const saved = localStorage.getItem('sv_tasks');
-    return saved ? JSON.parse(saved) : initialTasks;
-  });
-
-  const [vendors, setVendors] = useState<VendorItem[]>(() => {
-    const saved = localStorage.getItem('sv_vendors');
-    return saved ? JSON.parse(saved) : initialVendors;
-  });
-
-  const [guests, setGuests] = useState<GuestItem[]>(() => {
-    const saved = localStorage.getItem('sv_guests');
-    return saved ? JSON.parse(saved) : initialGuests;
-  });
-
-  const [moodboards, setMoodboards] = useState<MoodboardItem[]>(() => {
-    const saved = localStorage.getItem('sv_moodboards');
-    return saved ? JSON.parse(saved) : initialMoodboards;
-  });
-
-  const [photos, setPhotos] = useState<AlbumPhotoItem[]>(() => {
-    const saved = localStorage.getItem('sv_photos');
-    return saved ? JSON.parse(saved) : initialAlbumPhotos;
-  });
-
-  const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>(() => {
-    const saved = localStorage.getItem('sv_shopping');
-    return saved ? JSON.parse(saved) : initialShoppingItems;
-  });
-
-  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>(() => {
-    const saved = localStorage.getItem('sv_checklists');
-    return saved ? JSON.parse(saved) : initialChecklistItems;
-  });
-
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(() => {
-    const saved = localStorage.getItem('sv_team');
-    return saved ? JSON.parse(saved) : initialTeamMembers;
-  });
-
-  // Sync to local storage
-  useEffect(() => {
-    localStorage.setItem('sv_wedding', JSON.stringify(wedding));
-  }, [wedding]);
-
-  useEffect(() => {
-    localStorage.setItem('sv_budget', JSON.stringify(budgetItems));
-  }, [budgetItems]);
-
-  useEffect(() => {
-    localStorage.setItem('sv_tasks', JSON.stringify(tasks));
-  }, [tasks]);
-
-  useEffect(() => {
-    localStorage.setItem('sv_vendors', JSON.stringify(vendors));
-  }, [vendors]);
-
-  useEffect(() => {
-    localStorage.setItem('sv_guests', JSON.stringify(guests));
-  }, [guests]);
-
-  useEffect(() => {
-    localStorage.setItem('sv_moodboards', JSON.stringify(moodboards));
-  }, [moodboards]);
-
-  useEffect(() => {
-    localStorage.setItem('sv_photos', JSON.stringify(photos));
-  }, [photos]);
-
-  useEffect(() => {
-    localStorage.setItem('sv_shopping', JSON.stringify(shoppingItems));
-  }, [shoppingItems]);
-
-  useEffect(() => {
-    localStorage.setItem('sv_checklists', JSON.stringify(checklistItems));
-  }, [checklistItems]);
-
-  useEffect(() => {
-    localStorage.setItem('sv_team', JSON.stringify(teamMembers));
-  }, [teamMembers]);
-
-  // Test Firestore Connection
-  useEffect(() => {
-    testConnection();
   }, []);
 
   // Budget Auto-Sync with Vendors
@@ -428,7 +181,8 @@ export default function App() {
   const handleAddBudget = (item: Omit<BudgetItem, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newItem: BudgetItem = {
       ...item,
-      id: `b-${Date.now()}`,
+      weddingId: wedding.id,
+      id: `b-${crypto.randomUUID()}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -447,7 +201,8 @@ export default function App() {
   const handleAddTask = (task: Omit<TaskItem, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newTask: TaskItem = {
       ...task,
-      id: `t-${Date.now()}`,
+      weddingId: wedding.id,
+      id: `t-${crypto.randomUUID()}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -476,7 +231,8 @@ export default function App() {
   const handleAddVendor = (vendor: Omit<VendorItem, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newVendor: VendorItem = {
       ...vendor,
-      id: `v-${Date.now()}`,
+      weddingId: wedding.id,
+      id: `v-${crypto.randomUUID()}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -495,7 +251,8 @@ export default function App() {
   const handleAddGuest = (guest: Omit<GuestItem, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newGuest: GuestItem = {
       ...guest,
-      id: `g-${Date.now()}`,
+      weddingId: wedding.id,
+      id: `g-${crypto.randomUUID()}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -519,7 +276,8 @@ export default function App() {
   const handleAddPhoto = (photo: Omit<AlbumPhotoItem, 'id' | 'uploadedAt' | 'likes'>) => {
     const newPhoto: AlbumPhotoItem = {
       ...photo,
-      id: `p-${Date.now()}`,
+      weddingId: wedding.id,
+      id: `p-${crypto.randomUUID()}`,
       uploadedAt: new Date().toISOString(),
       likes: 1,
     };
@@ -538,7 +296,8 @@ export default function App() {
   const handleAddShoppingItem = (item: Omit<ShoppingItem, 'id' | 'createdAt'>) => {
     const newItem: ShoppingItem = {
       ...item,
-      id: `s-${Date.now()}`,
+      weddingId: wedding.id,
+      id: `s-${crypto.randomUUID()}`,
       createdAt: new Date().toISOString(),
     };
     setShoppingItems(prev => [newItem, ...prev]);
@@ -560,7 +319,7 @@ export default function App() {
   const handleAddChecklistItem = (item: Omit<ChecklistItem, 'id'>) => {
     const newItem: ChecklistItem = {
       ...item,
-      id: `c-${Date.now()}`,
+      id: `c-${crypto.randomUUID()}`,
     };
     setChecklistItems(prev => [newItem, ...prev]);
   };
@@ -573,7 +332,7 @@ export default function App() {
   const handleAddTeamMember = (member: Omit<TeamMember, 'id'>) => {
     const newMember: TeamMember = {
       ...member,
-      id: `tm-${Date.now()}`,
+      id: `tm-${crypto.randomUUID()}`,
     };
     setTeamMembers(prev => [...prev, newMember]);
   };
@@ -623,7 +382,29 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FCFBF7] dark:bg-[#151117] text-stone-900 dark:text-stone-100 font-sans selection:bg-[#4E2634] selection:text-white flex">
+    <div className="min-h-screen w-full bg-[#FCFBF7] dark:bg-[#151117] text-stone-900 dark:text-stone-100 font-sans selection:bg-[#4E2634] selection:text-white flex">
+      {workspace.error && (
+        <div role="alert" className="fixed top-3 left-3 right-3 z-[70] rounded-xl bg-rose-100 p-4 text-sm text-rose-950 shadow-lg">
+          Could not sync with Firebase: {workspace.error}
+          <button className="ml-3 underline" onClick={workspace.clearError}>Dismiss</button>
+        </div>
+      )}
+      {!hasWorkspace && (
+        <main className="m-auto max-w-lg p-6 text-center">
+          <h1 className="font-serif text-3xl">RasmReady</h1>
+          <p role="status" className="my-4">
+            {workspace.error ? 'Workspace could not load. Check the Firebase configuration and permissions.' : loading ? 'Loading your wedding workspace...' : currentUser ? 'Create a wedding or join with an invitation code.' : 'Sign in to plan together with your family.'}
+          </p>
+          {currentUser && (!loading || workspace.error) && (
+            <div className="flex flex-wrap justify-center gap-3">
+              <button className="rounded-xl bg-[#4E2634] px-4 py-2 text-white" onClick={() => setIsAuthModalOpen(true)}>Create a wedding</button>
+              <button className="rounded-xl border px-4 py-2" onClick={() => setIsJoinModalOpen(true)}>Join Wedding</button>
+              <button className="rounded-xl border px-4 py-2" onClick={() => setIsAuthModalOpen(true)}>Account</button>
+            </div>
+          )}
+        </main>
+      )}
+      {hasWorkspace && currentUser && <>
       
       {/* Left Sidebar Navigation */}
       <Sidebar
@@ -641,7 +422,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 lg:pl-64 flex flex-col min-h-screen">
+      <div className="min-w-0 w-full flex-1 lg:pl-64 flex flex-col min-h-screen">
         
         {/* Top Bar with Breadcrumbs & Universal Action */}
         <header className="sticky top-0 z-30 bg-[#FAF7F2]/90 dark:bg-[#1A151D]/90 backdrop-blur-md border-b border-[#EFECE6] dark:border-[#2B232E] px-4 sm:px-6 py-2.5">
@@ -665,6 +446,7 @@ export default function App() {
                 onSelectWedding={handleSelectWedding}
                 onOpenJoinModal={() => setIsJoinModalOpen(true)}
                 onOpenInviteModal={() => setIsInviteFamilyModalOpen(true)}
+                onOpenCreateWedding={() => setIsAuthModalOpen(true)}
               />
 
               <div className="hidden md:flex items-center gap-1.5 text-xs text-stone-400 truncate">
@@ -702,7 +484,7 @@ export default function App() {
               <button
                 onClick={() => setIsAuthModalOpen(true)}
                 className="flex items-center gap-2 pl-2 pr-2.5 py-1 rounded-xl bg-[#EFECE6] dark:bg-[#251E28] hover:bg-[#E5DFD5] dark:hover:bg-[#2F2633] text-stone-700 dark:text-stone-200 text-xs font-medium transition-colors border border-[#E0D9CE] dark:border-[#382E3D]"
-                title="Switch User / Login / Persona Testing"
+                title="Your account"
               >
                 <div className={`w-5 h-5 rounded-md flex items-center justify-center font-bold text-[10px] text-white ${currentUser.isAdmin ? 'bg-[#4E2634]' : 'bg-[#8B4459]'}`}>
                   {currentUser.avatarLetter}
@@ -723,6 +505,7 @@ export default function App() {
 
               {/* Edit Wedding Modal */}
               <button
+                disabled={!currentUser.isAdmin}
                 onClick={() => setIsWeddingModalOpen(true)}
                 className="p-1.5 rounded-xl text-stone-500 hover:text-stone-900 dark:hover:text-stone-200 hover:bg-[#EFECE6] dark:hover:bg-[#251E28] transition-colors"
                 title="Edit Wedding Details"
@@ -753,7 +536,8 @@ export default function App() {
         </header>
 
         {/* View Content Body */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main key={wedding.id} className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+          <p role="status" className="mb-3 text-xs text-stone-500">{saving ? 'Saving changes...' : 'Shared wedding workspace'}</p>
           {activeTab === 'overview' && (
             <OverviewView
               wedding={wedding}
@@ -812,6 +596,7 @@ export default function App() {
 
           {activeTab === 'checklists' && (
             <CoupleChecklistsView
+              wedding={wedding}
               items={checklistItems}
               onToggleItem={handleToggleChecklistItem}
               onAddItem={handleAddChecklistItem}
@@ -821,6 +606,8 @@ export default function App() {
 
           {activeTab === 'guests' && (
             <GuestsView
+              wedding={wedding}
+              tasks={tasks}
               guests={guests}
               activeSide={activeSide}
               onAdd={handleAddGuest}
@@ -868,12 +655,13 @@ export default function App() {
               🪷 Har taiyaari, apno ke saath.
             </span>
             <span className="text-[11px] text-stone-400">
-              Shared wedding workspace for {wedding.brideName} &amp; {wedding.groomName} · Nagpur
+              Shared wedding workspace for {wedding.brideName} &amp; {wedding.groomName} · {wedding.location}
             </span>
           </div>
         </footer>
 
       </div>
+      </>}
 
       {/* Quick Add Modal */}
       <QuickAddModal
@@ -884,7 +672,7 @@ export default function App() {
 
       {/* First-time User Welcome Modal */}
       <WelcomeModal
-        isOpen={isWelcomeOpen}
+        isOpen={hasWorkspace && isWelcomeOpen}
         onClose={handleCloseWelcome}
         onNavigateTab={(tab) => {
           setActiveTab(tab);
@@ -893,43 +681,38 @@ export default function App() {
       />
 
       {/* Wedding Configuration Edit Modal */}
-      <WeddingEditModal
+      {isWeddingModalOpen && <WeddingEditModal
         isOpen={isWeddingModalOpen}
         wedding={wedding}
         onClose={() => setIsWeddingModalOpen(false)}
         onSave={(updated) => setWedding(updated)}
-      />
+      />}
 
-      {/* User Login / Sign Up / Persona Switcher Modal */}
+      {/* Account Modal */}
       <AuthModal
-        isOpen={isAuthModalOpen}
+        isOpen={isAuthModalOpen || (!workspace.authLoading && !currentUser)}
         onClose={() => setIsAuthModalOpen(false)}
         currentUser={currentUser}
-        onLogin={handleLogin}
-        onLogout={handleLogout}
         wedding={wedding}
-        onUpdateWedding={(updated) => {
-          setWedding(updated);
-          localStorage.setItem('sv_wedding', JSON.stringify(updated));
-          localStorage.setItem('sv_registered_bride', updated.brideName);
-          localStorage.setItem('sv_registered_groom', updated.groomName);
-        }}
+        onSelectWedding={handleSelectWedding}
+        onError={reportError}
+        joiningWedding={isJoinModalOpen}
         onOpenJoinModal={() => setIsJoinModalOpen(true)}
       />
 
       {/* Invite Family Modal (WhatsApp 1-Click Link & Code Generator) */}
       <InviteFamilyModal
-        isOpen={isInviteFamilyModalOpen}
+        isOpen={hasWorkspace && isInviteFamilyModalOpen}
         onClose={() => setIsInviteFamilyModalOpen(false)}
         wedding={wedding}
       />
 
       {/* Join Wedding Modal (Direct Member Sign-Up & Multi-Wedding Enrollment) */}
       <JoinWeddingModal
-        isOpen={isJoinModalOpen}
+        isOpen={!!currentUser && isJoinModalOpen}
         onClose={() => setIsJoinModalOpen(false)}
         currentUser={currentUser}
-        onJoinWedding={handleJoinWedding}
+        onSelectWedding={handleSelectWedding}
         initialCode={joinCodeInitial}
         initialSide={joinSideInitial}
       />
